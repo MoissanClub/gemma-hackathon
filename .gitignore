@@ -1,0 +1,18 @@
+runs/
+__pycache__/
+*.pyc
+.DS_Store
+*.gguf
+bench/images*/
+assets/
+# media stays out (slow uplinks); small fixtures only under embodiments/*/media/
+*.jpg
+*.jpeg
+*.png
+*.wav
+*.aiff
+*.mp4
+*.mov
+*.webm
+!embodiments/*/media/*
+!embodiments/*/*/media/*
