@@ -85,6 +85,14 @@ class Gemma:
         words = [w for w in re.findall(r"[a-z0-9]+", ans) if w not in STOP_WORDS]
         return " ".join(words[:4]) or "unknown " + self.p["object"], rec
 
+    def describe_named(self, name, crop, stage="LOOK", media=None):
+        """An embodiment's own label plus the description of its best crop: the guest's word must be in the description
+        (LEARNINGS.md), and a flavour vote drops the brand ('orange' for a Fanta whose crop reads 'orange fanta')."""
+        if crop is None: return name or "unknown " + self.p["object"]
+        d = self.describe_crop(crop, stage=stage, media=media)[0]
+        if d.startswith("unknown"): return name or d
+        return d if set(re.findall(r"[a-z0-9]+", name.lower())) <= set(d.split()) else "%s %s" % (d, name)
+
     def hear_choice(self, wav_bytes, descriptions, stage="UNDERSTAND"):
         """Spoken order (any language) + the numbered descriptions in the system prompt -> (index or None, raw answer, record).
         Known failure: an order-free clip ("Hm.") once answered 1 (G1, 2026-10-23): confirm before acting."""
@@ -112,6 +120,12 @@ class Gemma:
         msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": [image_part(img), {"type": "text", "text": q}]}]
         ans, rec = self.ask("yesno", question, msgs, 3, stage, media=media, tag=tag)
         return (True if ans.startswith("yes") else False if ans.startswith("no") else None), ans, rec
+
+    def transcribe(self, wav_bytes, stage="UNDERSTAND"):
+        """A clip -> (English transcript, record). Empty for a clip with no speech: the order clip that was only the tail of
+        "Listening." came back '' while hear_choice still answered 2 (AgileX, 2026-10-24; 5 clips with speech, all non-empty)."""
+        msgs = [{"role": "user", "content": [{"type": "text", "text": self.p["take_q"]}, audio_part(wav_bytes)]}]
+        return self.ask("transcribe", self.p["take_q"], msgs, 16, stage, media="audio")
 
     def heard_take_it(self, wav_bytes, stage="HANDOVER"):
         """Short clip while offering the object -> (let-go phrase heard, transcript, record). Misheard on the G1 2026-10-23

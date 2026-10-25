@@ -20,7 +20,7 @@ def chat(base_url, payload, **kw):
         cans = dict((m.group(2).strip(), m.group(1)) for m in re.finditer(r"(\d+): ([^;.]+)", system))
         words = {w for w in re.findall(r"[a-z]+", said) if len(w) > 3}
         ans = next((n for d, n in cans.items() if words & set(re.findall(r"[a-z]+", d))), "1" if not said else "none")
-    elif "transcribe" in text: ans = "Okay, take it, thank you."
+    elif "transcribe" in text: ans = "The purple one. Okay, take it, thank you."   # agrees with the scripted audio choice (1)
     elif "yes or no" in text: ans = "yes"
     else: ans = "ready"
     return {"content": ans, "timings": {}, "total_s": 0.001, "tool_calls": [], "reasoning": ""}

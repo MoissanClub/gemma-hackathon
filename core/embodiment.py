@@ -57,6 +57,13 @@ class Embodiment:
         """A fresh Frame from the camera that sees the workspace. Never a cached frame: llama.cpp reuses the KV of a repeated image."""
         raise NotImplementedError
 
+    def survey(self):
+        """(frame, [(box, name, crop), ...]) when the robot finds the objects itself (a wrist camera that moves to several views
+        and votes), or None: the loop then boxes and describes one frame(). The boxes are in the returned frame; `name` is the
+        robot's own label or ""; `crop` is its best view of the object (or None), which the core describes with its own prompt
+        (Gemma.describe_named)."""
+        return None
+
     def detect(self, frame):
         """Object boxes [(x1, y1, x2, y2) pixels] in the frame, or None to let Gemma find them (core.gemma.Gemma.boxes)."""
         return None
