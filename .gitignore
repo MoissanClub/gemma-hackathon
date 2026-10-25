@@ -6,7 +6,6 @@ __pycache__/
 bench/images*/
 assets/
 # media stays out (slow uplinks); small fixtures only under embodiments/*/media/
-*.jpg
 *.jpeg
 *.png
 *.wav
