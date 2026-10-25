@@ -13,13 +13,13 @@ console there):
   $DPT/.venv/bin/python -B run.py -e agilex --server http://127.0.0.1:8090/v1                  # dry: look, listen, choose, locate
   $DPT/.venv/bin/python -B run.py -e agilex --server http://127.0.0.1:8090/v1 --opt motion=true  # the arm moves (owner + E-stop)
 
-Options (--opt key=value): motion (false), yes (false: Enter before each motion stage), repo (dual-piper-teleop's path),
+Options (--opt key=value): motion (false), yes (true; false: Enter before each motion stage), repo (dual-piper-teleop's path),
 config (configs/grab.yaml there), mic (ALSA device; default: the system's).
 
 Without motion the arm stays where it is (usually folded at rest, a poor view) and pick() refuses before moving.
 Coordinates: Target.xyz is the arm's base frame, metres, x ahead, y left, z up. Image left/right as robot left/right has not been
 checked for this wrist camera; position words may be mirrored."""
-import os, subprocess, sys, tempfile, time
+import os, re, subprocess, sys, tempfile, time
 from core.embodiment import Embodiment, Frame, Refused, SkillFailed, Target
 
 REPO = os.path.expanduser(os.environ.get("DUALPIPER_REPO", "~/work/MoissanClub/dual-piper-teleop"))
@@ -27,12 +27,26 @@ REFUSALS = {"too wide": "The %s one is too wide for my gripper.", "unreachable":
            "blocked": "The %s one is too close to its neighbours for my fingers. Please give it a few centimetres on each side."}
 
 
+def _words(s): return set(re.findall(r"[a-z0-9]+", s.lower()))
+
+
+def _grab_class(Grab):
+    """dual-piper-teleop's Grab with reads that agree only on whole words: its substring rule merged 'pineapple' x2 and 'apple'
+    x1 into one 'apple' and the pineapple vanished from the survey (2026-10-24). 'lychee' / 'sparkling lychee' still agree."""
+    class AgileXGrab(Grab):
+        @staticmethod
+        def _agree(a, b):
+            wa, wb = _words(a), _words(b)
+            return bool(wa) and bool(wb) and (wa <= wb or wb <= wa)
+    return AgileXGrab
+
+
 class AgileX(Embodiment):
     name = "agilex"
     capabilities = dict(Embodiment.capabilities, depth=True, mic=True, speaker=True, detector=False, grip_sensor=True)
     listen_seconds = 5.0
 
-    def __init__(self, motion=False, yes=False, repo=REPO, config="configs/grab.yaml", mic=None, **options):
+    def __init__(self, motion=False, yes=True, repo=REPO, config="configs/grab.yaml", mic=None, **options):
         self.motion, self.yes, self.repo, self.config, self.mic = motion, yes, os.path.expanduser(repo), config, mic
         self.r = self.grab = self.held = None
         self.surveyed = {}              # box -> Can from the last survey: locate measures nothing twice
@@ -49,7 +63,7 @@ class AgileX(Embodiment):
         self.r = PiperRobot(self.cfg["llm_config"], motion=self.motion)
         confirm = (lambda p: True) if self.yes else (lambda p: input("  %s [Enter = yes, n = stop] " % p).strip().lower() != "n")
         # Grab's own Gemma serves only its close looks (boxes when a close-up has no round lid); the core's Gemma does the rest
-        self.grab = Grab(self.r, DptGemma(self.cfg["gemma_url"]), self.cfg, say=self.say, confirm=confirm,
+        self.grab = _grab_class(Grab)(self.r, DptGemma(self.cfg["gemma_url"]), self.cfg, say=self.say, confirm=confirm,
                          out_dir=os.path.join(self.repo, "sessions", "grab"))
         self.grab.trial = {"id": "agilex-" + time.strftime("%Y%m%d-%H%M%S"), "params": dict(self.cfg)}
         if self.r.T_cam is None:
@@ -91,6 +105,7 @@ class AgileX(Embodiment):
         colour = next((d["frame"] for d in dets if d.get("source") == "view"), None)
         if colour is None: colour = self.r.cam.capture()[0]
         out, self.surveyed = [], {}
+        for d in dets: self._edge_fix(d, colour.shape[1], colour.shape[0])
         for d in dets:
             crops = d.get("crops", [])
             reads = [c for c in crops if c["name"] and self.grab._agree(c["name"], d["name"])] or crops
@@ -105,6 +120,23 @@ class AgileX(Embodiment):
             # and the tie-break kept 'cola' only (2026-10-24); the core's order check asks again if that leaves it unsure
             self.surveyed[box] = d["can"]; out.append((box, " ".join([d["name"]] + tied).strip(), crop))
         return Frame(colour, meta={"q": self.r.q_meas().tolist()}, t=time.time()), out
+
+    EDGE_PX = 5                         # a view box this close to the frame border holds part of the can
+
+    def _edge_fix(self, d, W, H):
+        """A view-pose box cut by the frame border fits a wrong can (the pineapple: box from y = 3 px, 86 mm, 46.4 cm out, refused
+        as out of reach; its 3 reading-pose looks said 42.0-43.9 cm, 2026-10-24): take the median of its reading-pose positions.
+        Its diameter and top come from the reading look with the most points; _pick re-measures both from close up."""
+        import numpy as np
+        from dataclasses import replace
+        x1, y1, x2, y2 = d["box"]
+        reads = [c for c in d.get("crops", []) if c.get("can") is not None]
+        if d.get("source") != "view" or not reads or min(x1, y1, W - x2, H - y2) > self.EDGE_PX: return
+        best = max(reads, key=lambda c: c["can"].n_points)["can"]
+        axis = np.median([c["can"].axis for c in reads], axis=0)
+        print("  %s cut by the view's edge at %s cm: using its reading-pose position %s cm" % (d["name"] or "a can",
+              np.round(d["can"].axis * 100, 1).tolist(), np.round(axis * 100, 1).tolist()), flush=True)
+        d["can"] = replace(best, axis=axis)
 
     def position_words(self, boxes, width):
         """Left to right by the measured y (arm frame, y left), not by the box: surveyed boxes come from different poses."""

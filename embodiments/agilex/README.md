@@ -26,10 +26,13 @@ venv (numpy, OpenCV, piper_sdk, pyrealsense2), the arm's CAN up (`can_left`), an
 ```bash
 DPT=~/work/MoissanClub/dual-piper-teleop
 $DPT/.venv/bin/python -B run.py -e agilex --server http://127.0.0.1:8090/v1 --typed                 # dry: nothing moves
-$DPT/.venv/bin/python -B run.py -e agilex --server http://127.0.0.1:8090/v1 --opt motion=true      # owner + E-stop
+$DPT/.venv/bin/python -B run.py -e agilex --server http://127.0.0.1:8090/v1 --opt motion=true --typed   # owner + E-stop; type the order
+$DPT/.venv/bin/python -B run.py -e agilex --server http://127.0.0.1:8090/v1 --opt motion=true \
+  --opt mic=plughw:CARD=PowerConf                                                                    # spoken order and "take it"
 ```
 
-`motion=true` moves to the view pose at start (announced) and asks Enter before each motion stage unless `--opt yes=true`.
+`motion=true` moves to the view pose at start (announced) and runs every motion stage without asking (keep the E-stop in hand);
+`--opt yes=false` asks Enter before each one.
 Without motion the arm stays where it is and `pick` refuses before moving.
 
 ## Status (2026-10-24)
@@ -55,6 +58,12 @@ Without motion the arm stays where it is and `pick` refuses before moving.
   reading-pose position, left/right from the measured y; LOCATE uses the survey's measurement (a second Gemma boxing missed the
   Pepsi); an order needs a non-empty transcript and the same can from the clip and from its transcript; a can whose reads tie
   keeps every tied name.
+- Later: typed pineapple refused at 46.4 cm (its view box was cut by the frame's top edge: 86 mm, a bad fit; 3 reading poses
+  said 42-44 cm), then delivered to the wrong can (Grab's substring vote merged 'pineapple' x2 + 'apple' into 'apple'), then
+  delivered right after both fixes below. Tally now 14 motion orders: right can 7, wrong 5, refused 1, unconfirmed 1.
+- Fixed: a view box within 5 px of the frame border takes the median of its reading-pose positions (`_edge_fix`); reads agree only
+  on whole words (`AgileXGrab._agree`, dual-piper-teleop unchanged); motion stages no longer wait for Enter (`yes` defaults to
+  true).
 - Open: numbered labels ("number 3" with more than 3 cans) let a spoken number pick a can; cans closer than a few cm merge in the
   survey (a box over two cans; the Fanta vanished into the watermelon once); cans past 45 cm are refused (the workspace edge);
   "take it" also fires on "take care" and "thank you"; a quiet room or typed orders for the demo.
