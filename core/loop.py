@@ -69,8 +69,13 @@ class Loop:
 
     def look(self):
         """LOOK: fresh frame, boxes, one short Gemma description per crop, plus words for position (and size, if the robot adds it)."""
-        self.stage("LOOK"); frame = self.r.frame(); boxes, src = self.boxes(frame)
-        descs = [self.g.describe_crop(image.crop(frame.image, b), stage="LOOK", media="object %d" % i)[0] for i, b in enumerate(boxes)]
+        self.stage("LOOK"); sc = self.r.survey()
+        if sc is not None:
+            frame, named = sc; boxes, src = [n[0] for n in named], "embodiment survey"
+            descs = [self.g.describe_named(nm, c, stage="LOOK", media="object %d" % i) for i, (_, nm, c) in enumerate(named)]
+        else:
+            frame = self.r.frame(); boxes, src = self.boxes(frame)
+            descs = [self.g.describe_crop(image.crop(frame.image, b), stage="LOOK", media="object %d" % i)[0] for i, b in enumerate(boxes)]
         pos = self.r.position_words(boxes, image.size(frame.image)[0])
         scene = [{"i": i, "box": [round(v) for v in b], "desc": d, "words": ", ".join(w for w in (d, p) if w)} for i, (b, d, p) in enumerate(zip(boxes, descs, pos))]
         self.log.event(ev="scene", stage="LOOK", boxes_by=src, objects=scene, tag="Gemma decision")

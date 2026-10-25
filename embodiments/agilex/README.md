@@ -8,7 +8,8 @@ provenance there; none is set here.
 | Interface | Implementation |
 | --- | --- |
 | `frame` | D405 colour + depth, joint angles at capture |
-| `detect` | none: the core's Gemma boxes |
+| `detect` | none: the core's Gemma boxes (only without motion; with motion `survey` finds the cans) |
+| `survey` | `Grab.survey`: reads labels from 3 low poses, votes, measures from the view pose; returns each can with its best crop |
 | `listen` / `say` | `arecord` 16 kHz mono (USB speakerphone) / `spd-say -w` |
 | `locate` | `Grab.look` (depth points in the box -> can axis, top, diameter in the base frame); refuses too wide, out of reach, crowded |
 | `pick` | `Grab._pick`: pre-grasp, correction from close up, straight approach with a contact stop, close, jaws vs measured diameter, 6 cm lift |
@@ -34,12 +35,16 @@ Without motion the arm stays where it is and `pick` refuses before moving.
 ## Status (2026-10-24)
 
 - `check.py`: PASS (with an OpenCV Python; system Python on Linux has no `sips` fallback).
-- Dry run of the shared loop on the arm, folded at rest, motion off, typed orders (n=2): LOOK boxed 4 cans and described them;
-  "the white peach please" -> `none` (no peach among the 4 read) -> the honest negative; "the watermelon one" -> can 2 -> LOCATE
-  measured it and refused it as out of reach. From the folded pose the D405 sees part of each can (the same pose measured a 57 mm
-  can as 35 mm in dual-piper-teleop plan-only runs the same day); `motion=true` looks from the view pose, where dual-piper-teleop's
-  own grab read and measured it right (57 mm, grasped 1/1).
-- Not yet run: the shared loop with motion; the spoken order and "take it" on this mic; image left/right vs robot left/right for
-  position words (unchecked for the wrist camera).
-- The core's prompts describe cans by colour first ("silver chi watermelon"); every can here is silver, so flavour does the work.
-  dual-piper-teleop's flavour read (2x crop, flavour-only question) is its measured variant for these cans; not used here yet.
+- **Delivered 4 of 5 orders on the arm with motion** (shared loop, `yes=true`, cans in one row ~35-40 cm out): typed "mango" ->
+  mango; typed "give me a fanta" -> Coca-Cola (wrong, before the brand fix below), then -> Fanta; spoken "pepsi" (PowerConf mic)
+  -> Pepsi, Gemma heard the order in 372 ms. 75-86 s per order: survey ~22 s, pick + lift ~22 s.
+- **The wrist camera has to move to see**: from one pose it sees can tops ("silver chilly"), no flavour. `survey()` runs
+  `Grab.survey`: three low reading poses (`read_q_deg`), a majority vote per can, positions from the view pose.
+- **The guest's word must be in the description**: the vote names the flavour ("orange"), and "give me a fanta" chose
+  "coca-cola" (Fanta is a Coca-Cola brand): 3 of 4 phrasings, `none` for the 4th, with either choose prompt. The core now describes each can's largest
+  reading-pose crop and keeps the voted name (`Gemma.describe_named`): "orange fanta" -> 7/7 orders right on the saved crops, 1/1 on
+  the arm.
+- "Out of reach" refusals earlier in the day were right: back-row cans measured 46-48 cm out, the workspace ends at 45 cm.
+- Open: a can read from a reading pose but not boxed from the view pose is left out of the choice (mango at y = -27 cm, 3 runs;
+  Pepsi once); repeated words in a name ("orange fanta orange"); "take it" released on the first clip, heard as "Thank you."
+  (`thank` is a let-go word); image left/right vs robot left/right for position words is unchecked.

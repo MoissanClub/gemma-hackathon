@@ -85,6 +85,14 @@ class Gemma:
         words = [w for w in re.findall(r"[a-z0-9]+", ans) if w not in STOP_WORDS]
         return " ".join(words[:4]) or "unknown " + self.p["object"], rec
 
+    def describe_named(self, name, crop, stage="LOOK", media=None):
+        """An embodiment's own label plus the description of its best crop: the guest's word must be in the description
+        (LEARNINGS.md), and a flavour vote drops the brand ('orange' for a Fanta whose crop reads 'orange fanta')."""
+        if crop is None: return name or "unknown " + self.p["object"]
+        d = self.describe_crop(crop, stage=stage, media=media)[0]
+        if d.startswith("unknown"): return name or d
+        return d if set(re.findall(r"[a-z0-9]+", name.lower())) <= set(d.split()) else "%s %s" % (d, name)
+
     def hear_choice(self, wav_bytes, descriptions, stage="UNDERSTAND"):
         """Spoken order (any language) + the numbered descriptions in the system prompt -> (index or None, raw answer, record).
         Known failure: an order-free clip ("Hm.") once answered 1 (G1, 2026-10-23): confirm before acting."""

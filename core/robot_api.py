@@ -23,11 +23,14 @@ class RobotAPI:
         self.e, self.g, self.log, self.seen, self.held = embodiment, gem, log or (lambda **r: None), {}, False
 
     def look(self):
-        frame = self.e.frame(); boxes = self.e.detect(frame)
-        if boxes is None: boxes = self.g.boxes(frame.image)[0]
+        sc = self.e.survey()
+        if sc is not None: frame, named = sc[0], [(b, self.g.describe_named(nm, c)) for b, nm, c in sc[1]]
+        else:
+            frame = self.e.frame(); boxes = self.e.detect(frame)
+            if boxes is None: boxes = self.g.boxes(frame.image)[0]
+            named = [(b, self.g.describe_crop(image.crop(frame.image, b))[0]) for b in boxes]
         out, self.seen = [], {}
-        for i, b in enumerate(boxes):
-            desc = self.g.describe_crop(image.crop(frame.image, b))[0]
+        for i, (b, desc) in enumerate(named):
             try: tg = self.e.locate(frame, b, desc)
             except Refused: tg = None
             self.seen[i] = (frame, b, desc, tg)

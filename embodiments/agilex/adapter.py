@@ -76,6 +76,28 @@ class AgileX(Embodiment):
         colour, depth = self.r.cam.capture()
         return Frame(colour, depth=depth, meta={"q": self.r.q_meas().tolist()}, t=time.time())
 
+    def survey(self):
+        """The wrist camera sees only part of the table from one pose: Grab.survey reads the labels from its low reading poses
+        (read_q_deg), names each can by majority vote, and measures it from the view pose. Returns the view frame, the boxes in
+        it, the voted flavour and the largest reading-pose crop with that name (the label side; the view pose sees the top), so
+        the core can add the brand: the vote said 'orange', the crop says 'orange fanta' (2026-10-24, 3/3 crops). A can read but
+        not boxed from the view pose is left out (no box in this frame). Without motion: None (one look)."""
+        from core import image
+        if not self.motion: return None
+        self.say("Looking at the table from a few sides.")
+        dets = self.grab.survey()
+        view = [d for d in dets if d.get("source", "view") == "view"]
+        for d in dets:
+            if d.get("source", "view") != "view": print("  read from a reading pose but not boxed from the view pose: %s at %s cm" % (d["name"], d["can"].as_dict()["axis_cm"]), flush=True)
+        colour = view[0]["frame"] if view else self.r.cam.capture()[0]
+        out = []
+        for d in view:
+            reads = [c for c in d.get("crops", []) if c["name"] and self.grab._agree(c["name"], d["name"])] or d.get("crops", [])
+            best = max(reads, key=lambda c: (c["box"][2] - c["box"][0]) * (c["box"][3] - c["box"][1]), default=None)
+            crop = image.crop(best["frame"], best["box"]) if best else image.crop(colour, d["box"])
+            out.append((tuple(map(float, d["box"])), d["name"], crop))
+        return Frame(colour, meta={"q": self.r.q_meas().tolist()}, t=time.time()), out
+
     def listen(self, seconds):
         with tempfile.NamedTemporaryFile(suffix=".wav") as f:
             cmd = ["arecord", "-q", "-f", "S16_LE", "-r", "16000", "-c", "1", "-d", str(max(1, int(round(seconds))))]
