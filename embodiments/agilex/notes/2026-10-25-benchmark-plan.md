@@ -53,9 +53,42 @@ so the pointing and check datasets need object-absent frames, scored as their ow
 - Local: hours of serial GPU time across model sizes and machines.
 - Labelling the frames is the real bottleneck, not compute.
 
+## Access without paid APIs
+
+- **Gemini Robotics-ER**: free tier via a Google AI Studio key (rate-limited: run slowly, overnight). The pointing model that matters
+  most. Google lists ER 1.5 Preview; third-party listings show ER 1.6 (check AI Studio for the current one). Google reports pointing
+  61% (1.5) -> 80% (1.6): their number, not ours.
+- **Open pointing models** (Molmo, Qwen-VL, RoboBrain, RoboRefer): free locally, or a few dollars on a rented GPU. Same point-output
+  format, one wrapper.
+- **Claude / GPT**: no API key, so out of the first round. At most ~20 frames pasted by hand into the chat apps as a sanity check
+  (no latency, not a benchmark). If one looks promising, pay-as-you-go (e.g. OpenRouter) is a few dollars for 200 frames.
+
+## Verifying answers: fixed ground truth, never a model judge
+
+- Public pointing sets ship masks: a point inside the mask is a hit, scored automatically.
+- Own frames: click the point or draw the region once (a small labelling page, labels as JSON beside the frames, out of git);
+  pixel error, then cm via D405 depth.
+- Yes/no checks: hand labels; "in gripper" also from the gripper width against the measured diameter (`holding`).
+- Spot-check ~20 answers per model by hand for what the scorer misses (malformed answers that happen to hit).
+
+## Public datasets
+
+| Role | Dataset | Use |
+| --- | --- | --- |
+| Pointing | Where2Place (`huggingface.co/datasets/wentao-yuan/where2place`) | 100 real cluttered scenes, sentence + free-space mask; first run |
+| Pointing | RefSpatial-Bench (`huggingface.co/datasets/BAAI/RefSpatial-Bench`) | real scenes, precise masks; location / placement / unseen; mostly multi-step |
+| Pointing | PointArena / Point-Bench (arXiv 2505.09990) | ~1,000 pointing tasks, 5 categories; blind pairwise arena |
+| Pointing | RoboPoint data (arXiv 2406.10721) | grasp / place affordance points |
+| Tracking | DAVIS, MOSE, YCB-Video | video object masks; YCB-Video has tabletop objects with 3D poses |
+| Grasp | GraspNet-1Billion, Jacquard | depth scenes labelled with grasps |
+
+Public sets check the pipeline and compare against published scores; the decision comes from our own Piper frames (none of these
+has the wrist D405 view or our cans).
+
 ## Next steps
 
-1. Record and label the pointing dataset on the Pipers.
-2. Build a common model wrapper and a JSONL format in `bench/`.
-3. Run the cloud pointing models in parallel, then the local models one at a time.
-4. Write up the results with n and per-class counts, and pick a model for each role.
+1. Run Where2Place and RefSpatial-Bench on Gemini Robotics-ER (free tier), Molmo and Gemma E2B: mask-scored, no labelling.
+2. Record and label the pointing dataset on the Pipers.
+3. Build a common model wrapper and a JSONL format in `bench/`.
+4. Run the cloud pointing models in parallel, then the local models one at a time.
+5. Write up the results with n and per-class counts, and pick a model for each role.
