@@ -1,8 +1,8 @@
 # Offline judge presentation
 
-Open `index.html` directly in Chrome, Safari, or Edge. No server, installation, internet connection, or external assets are needed.
+Open `index.html` directly in Chrome, Safari, or Edge. Keep the `images/` folder beside it. No server, installation, or internet connection is needed.
 
-The single HTML file contains 12 main slides, 2 evidence appendices, photos, animated charts, speaker notes, and sources. It can be copied to another computer by itself.
+The presentation contains 12 main slides, 2 evidence appendices, animated charts, speaker notes, and sources. Copy the entire `presentation/` folder when moving it to another computer. Images are separate files referenced through relative paths.
 
 ## Controls
 
@@ -34,3 +34,18 @@ Sources and scope are embedded in each slide's **N** panel. Model-size charts us
 PiPER, mobile SO-101, AGX Thor, and the latest G1 third-person automatic-calibration updates include the presenter's latest team reports. No unrecorded performance numbers are supplied for them.
 
 Browser printing exposes all 14 slides. The file has no automatic external requests and uses system fonts.
+
+## Image files
+
+- `images/cover-original.jpg`: original cover photo, preserved for your own cropping.
+- `images/cover-g1.png`: transparent G1 cover cutout, once generated.
+- `images/drink-scene.jpg`: cans shown on the native vision/audio slide.
+- `images/servo-measurement.jpg`: measurement image on the feedback slide.
+
+You can crop or replace these files in an image editor. Keep the same filenames, or update their `src` paths in `index.html`. The cover framing is controlled by `.cover-photo img` near the top of the HTML. All image paths are relative to the HTML file.
+
+## Cover cutout
+
+`images/cover-g1.png` is the transparent cover cutout. `images/cover-original.jpg` preserves the original photograph. You can crop or replace either image with your own editor. The cover uses `object-fit: contain` and `object-position: center`, so the PNG itself controls the framing.
+
+The cover background was removed using the built-in image tool. Edit request: isolate the visible G1 arm, hand and held can on transparent alpha, remove people and room, and preserve the photographed pose and details.
