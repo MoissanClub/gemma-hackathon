@@ -121,6 +121,12 @@ class Gemma:
         ans, rec = self.ask("yesno", question, msgs, 3, stage, media=media, tag=tag)
         return (True if ans.startswith("yes") else False if ans.startswith("no") else None), ans, rec
 
+    def transcribe(self, wav_bytes, stage="UNDERSTAND"):
+        """A clip -> (English transcript, record). Empty for a clip with no speech: the order clip that was only the tail of
+        "Listening." came back '' while hear_choice still answered 2 (AgileX, 2026-10-24; 5 clips with speech, all non-empty)."""
+        msgs = [{"role": "user", "content": [{"type": "text", "text": self.p["take_q"]}, audio_part(wav_bytes)]}]
+        return self.ask("transcribe", self.p["take_q"], msgs, 16, stage, media="audio")
+
     def heard_take_it(self, wav_bytes, stage="HANDOVER"):
         """Short clip while offering the object -> (let-go phrase heard, transcript, record). Misheard on the G1 2026-10-23
         ("A cake.", "Packet"): keep a key or a timeout as the fallback release."""

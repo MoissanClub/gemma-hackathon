@@ -35,7 +35,7 @@ Without motion the arm stays where it is and `pick` refuses before moving.
 ## Status (2026-10-24)
 
 - `check.py`: PASS (with an OpenCV Python; system Python on Linux has no `sips` fallback).
-- **Delivered 4 of 5 orders on the arm with motion** (shared loop, `yes=true`, cans in one row ~35-40 cm out): typed "mango" ->
+- **Motion orders, afternoon** (shared loop, `yes=true`, cans in one row ~35-40 cm out): typed "mango" ->
   mango; typed "give me a fanta" -> Coca-Cola (wrong, before the brand fix below), then -> Fanta; spoken "pepsi" (PowerConf mic)
   -> Pepsi, Gemma heard the order in 372 ms. 75-86 s per order: survey ~22 s, pick + lift ~22 s.
 - **The wrist camera has to move to see**: from one pose it sees can tops ("silver chilly"), no flavour. `survey()` runs
@@ -45,6 +45,16 @@ Without motion the arm stays where it is and `pick` refuses before moving.
   reading-pose crop and keeps the voted name (`Gemma.describe_named`): "orange fanta" -> 7/7 orders right on the saved crops, 1/1 on
   the arm.
 - "Out of reach" refusals earlier in the day were right: back-row cans measured 46-48 cm out, the workspace ends at 45 cm.
-- Open: a can read from a reading pose but not boxed from the view pose is left out of the choice (mango at y = -27 cm, 3 runs;
-  Pepsi once); repeated words in a name ("orange fanta orange"); "take it" released on the first clip, heard as "Thank you."
-  (`thank` is a let-go word); image left/right vs robot left/right for position words is unchecked.
+- **Tally, 12 motion orders today**: right can 6 (typed mango, typed Fanta x2, voice Pepsi x2, typed watermelon); wrong can 4
+  (Fanta -> Coca-Cola before the brand fix; voice: Pepsi -> watermelon, Pepsi -> apple, Fanta -> peach); refused 1 (Fanta at
+  45.3 cm, past the workspace); unconfirmed 1 (heard "Coca-Cola", delivered Coca-Cola).
+- Evening (after b3e8b34): voice Pepsi delivered on the second try (the first clip was room talk: audio and transcript chose
+  differently, so it asked again); typed Fanta and watermelon delivered. Voice in the venue failed 3 times: a silent clip chose
+  watermelon, "hapsy" chose apple, room talk with "3" chose can 3 of 6 (both reads agreed on the number).
+- Fixed: a can seen only from the reading poses (closer than ~30 cm: the view pose cannot see it) is offered with its
+  reading-pose position, left/right from the measured y; LOCATE uses the survey's measurement (a second Gemma boxing missed the
+  Pepsi); an order needs a non-empty transcript and the same can from the clip and from its transcript; a can whose reads tie
+  keeps every tied name.
+- Open: numbered labels ("number 3" with more than 3 cans) let a spoken number pick a can; cans closer than a few cm merge in the
+  survey (a box over two cans; the Fanta vanished into the watermelon once); cans past 45 cm are refused (the workspace edge);
+  "take it" also fires on "take care" and "thank you"; a quiet room or typed orders for the demo.

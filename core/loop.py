@@ -69,10 +69,11 @@ class Loop:
 
     def look(self):
         """LOOK: fresh frame, boxes, one short Gemma description per crop, plus words for position (and size, if the robot adds it)."""
-        self.stage("LOOK"); sc = self.r.survey()
+        self.stage("LOOK"); sc = self.r.survey(); self.surveyed = None
         if sc is not None:
             frame, named = sc; boxes, src = [n[0] for n in named], "embodiment survey"
             descs = [self.g.describe_named(nm, c, stage="LOOK", media="object %d" % i) for i, (_, nm, c) in enumerate(named)]
+            self.surveyed = (frame, boxes)
         else:
             frame = self.r.frame(); boxes, src = self.boxes(frame)
             descs = [self.g.describe_crop(image.crop(frame.image, b), stage="LOOK", media="object %d" % i)[0] for i, b in enumerate(boxes)]
@@ -97,7 +98,14 @@ class Loop:
                 self.say(LISTENING); wav = self.r.listen(self.r.listen_seconds)
                 if wav: self.log.save("order_%d.wav" % (attempt + 1), wav); self.log.event(ev="record", stage="LISTEN", bytes=len(wav), tag="embodiment skill")
             self.stage("UNDERSTAND")
-            if wav: idx, ans, _ = self.g.hear_choice(wav, words)
+            if wav:
+                said = self.g.transcribe(wav)[0].strip()
+                if not said: self.o.setdefault("heard", []).append(""); continue      # no speech: never choose from silence
+                idx, ans, _ = self.g.hear_choice(wav, words)
+                if self.g.choose_text(said, words)[0] != idx:
+                    # the clip and its transcript must pick the same one (AgileX 2026-10-24, 9 clips: the 5 that agreed were all
+                    # right; 'hapsy' -> apple and silence -> watermelon disagreed): ask again rather than guess
+                    self.o.setdefault("heard", []).append("%s / %r" % (ans, said)); continue
             else:
                 text = self.typed("  order> ").strip()
                 if not text: continue
@@ -108,8 +116,15 @@ class Loop:
         return None
 
     def relocate(self, want):
-        """LOCATE: a fresh frame, the chosen object matched to the new boxes (IoU, else by description), then the embodiment's geometry."""
-        self.stage("LOCATE", want["desc"]); frame = self.r.frame(); boxes, _ = self.boxes(frame)
+        """LOCATE: a fresh frame, the chosen object matched to the new boxes (IoU, else by description), then the embodiment's geometry.
+        After an embodiment survey: its own frame and box, not a second detection (2026-10-24, AgileX: a fresh Gemma boxing missed
+        the Pepsi the survey had found, and the top-down crops no longer said 'pepsi')."""
+        self.stage("LOCATE", want["desc"])
+        if self.surveyed:
+            frame, boxes = self.surveyed; tg = self.r.locate(frame, boxes[want["i"]], want["desc"])
+            self.log.event(ev="target", stage="LOCATE", desc=want["desc"], xyz=tg.xyz, box=want["box"], tag="embodiment skill")
+            print("  target %r" % (tg,), flush=True); return tg
+        frame = self.r.frame(); boxes, _ = self.boxes(frame)
         if not boxes: raise Refused("I lost sight of it.")
         best = max(boxes, key=lambda b: iou(b, want["box"]))
         if iou(best, want["box"]) < 0.2:

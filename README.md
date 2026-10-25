@@ -29,7 +29,7 @@ request, after the image; code does geometry, motion and safety.** Brain v2 on t
 | --- | --- | --- | --- |
 | `mock` | runs end to end, fake or real Gemma | - | reference |
 | `g1` | adapter mapped, **not wired** | `embodiments/g1/brain/brain.py` (brain v2) | Junda |
-| `agilex` | delivered 4 of 5 orders on the arm (typed and spoken), survey from 3 reading poses | dual-piper-teleop `grab` (wrapped) | teammate |
+| `agilex` | 12 motion orders on the arm: 6 right can, 4 wrong, 1 refused (out of reach), 1 unconfirmed; survey from 3 reading poses | dual-piper-teleop `grab` (wrapped) | teammate |
 
 ## Quick start (Mac)
 

@@ -35,6 +35,7 @@ class AgileX(Embodiment):
     def __init__(self, motion=False, yes=False, repo=REPO, config="configs/grab.yaml", mic=None, **options):
         self.motion, self.yes, self.repo, self.config, self.mic = motion, yes, os.path.expanduser(repo), config, mic
         self.r = self.grab = self.held = None
+        self.surveyed = {}              # box -> Can from the last survey: locate measures nothing twice
         self.clean = True               # False after a stop or a failed skill: shutdown then holds instead of parking
 
     # --- lifecycle --------------------------------------------------------------------------------------------------------
@@ -78,25 +79,44 @@ class AgileX(Embodiment):
 
     def survey(self):
         """The wrist camera sees only part of the table from one pose: Grab.survey reads the labels from its low reading poses
-        (read_q_deg), names each can by majority vote, and measures it from the view pose. Returns the view frame, the boxes in
-        it, the voted flavour and the largest reading-pose crop with that name (the label side; the view pose sees the top), so
-        the core can add the brand: the vote said 'orange', the crop says 'orange fanta' (2026-10-24, 3/3 crops). A can read but
-        not boxed from the view pose is left out (no box in this frame). Without motion: None (one look)."""
+        (read_q_deg), names each can by majority vote, and measures it from the view pose. Each can comes with the voted flavour
+        and its largest reading-pose crop with that name (the label side; the view pose sees the top), so the core can add the
+        brand: the vote said 'orange', the crop says 'orange fanta' (2026-10-24, 3/3 crops). A can the view pose does not see
+        (closer than ~30 cm: the Pepsi at 28.6 cm, 2026-10-24) keeps its reading-pose position and box: the box is in that
+        pose's frame, so locate() looks it up and position_words() uses the measured y, never the box. Without motion: None."""
         from core import image
         if not self.motion: return None
         self.say("Looking at the table from a few sides.")
         dets = self.grab.survey()
-        view = [d for d in dets if d.get("source", "view") == "view"]
+        colour = next((d["frame"] for d in dets if d.get("source") == "view"), None)
+        if colour is None: colour = self.r.cam.capture()[0]
+        out, self.surveyed = [], {}
         for d in dets:
-            if d.get("source", "view") != "view": print("  read from a reading pose but not boxed from the view pose: %s at %s cm" % (d["name"], d["can"].as_dict()["axis_cm"]), flush=True)
-        colour = view[0]["frame"] if view else self.r.cam.capture()[0]
-        out = []
-        for d in view:
-            reads = [c for c in d.get("crops", []) if c["name"] and self.grab._agree(c["name"], d["name"])] or d.get("crops", [])
+            crops = d.get("crops", [])
+            reads = [c for c in crops if c["name"] and self.grab._agree(c["name"], d["name"])] or crops
             best = max(reads, key=lambda c: (c["box"][2] - c["box"][0]) * (c["box"][3] - c["box"][1]), default=None)
             crop = image.crop(best["frame"], best["box"]) if best else image.crop(colour, d["box"])
-            out.append((tuple(map(float, d["box"])), d["name"], crop))
+            box = tuple(map(float, d["box"]))
+            while box in self.surveyed: box = box[:3] + (box[3] + 0.001,)  # a reading-pose box equal to a view box: keep both
+            votes = d.get("votes") or {}
+            top = max(votes.values(), default=0)
+            tied = [n for n, k in votes.items() if k == top and not self.grab._agree(n, d["name"])]
+            # reads that tie keep every name: a box over the Pepsi and the Coca-Cola behind it read 'cola', the side view 'pepsi',
+            # and the tie-break kept 'cola' only (2026-10-24); the core's order check asks again if that leaves it unsure
+            self.surveyed[box] = d["can"]; out.append((box, " ".join([d["name"]] + tied).strip(), crop))
         return Frame(colour, meta={"q": self.r.q_meas().tolist()}, t=time.time()), out
+
+    def position_words(self, boxes, width):
+        """Left to right by the measured y (arm frame, y left), not by the box: surveyed boxes come from different poses."""
+        cans = [self.surveyed.get(tuple(map(float, b))) for b in boxes]
+        if any(c is None for c in cans): return Embodiment.position_words(self, boxes, width)
+        n = len(cans)
+        if n == 1: return [""]
+        if n > 3: return ["number %d" % (i + 1) for i in range(n)]
+        names = ["on the left", "on the right"] if n == 2 else ["on the left", "in the middle", "on the right"]
+        out = [""] * n
+        for rank, i in enumerate(sorted(range(n), key=lambda i: -float(cans[i].axis[1]))): out[i] = names[rank]
+        return out
 
     def listen(self, seconds):
         with tempfile.NamedTemporaryFile(suffix=".wav") as f:
@@ -111,17 +131,21 @@ class AgileX(Embodiment):
 
     # --- geometry ---------------------------------------------------------------------------------------------------------
     def locate(self, frame, box, desc=None):
-        """The can in `box`: Grab.look on a fresh frame (its own boxes, with depth and the arm pose at capture), the box that
-        overlaps the core's most, then the grasp checked for size, reach and crowding before anything moves."""
+        """The can in `box`: the survey's measurement when the box is one of its own, else Grab.look on a fresh frame (its own
+        boxes, with depth and the arm pose at capture) and the box that overlaps the core's most; then the grasp checked for size,
+        reach and crowding before anything moves. _pick corrects the position from close up before it grasps."""
         from dualpiper.grab.scene import grasp_points
         from core.loop import iou
         what = desc or "that"
-        dets = [d for d in self.grab.look("locate", read=False) if d["can"] is not None]
-        if not dets: raise Refused("I cannot measure the %s one. Please move it a little toward the middle of the table." % what)
-        best = max(dets, key=lambda d: iou(d["box"], box))
-        if iou(best["box"], box) < 0.3:
-            raise Refused("I lost the %s one when I measured it. Please ask again." % what)
-        can, c = best["can"], self.cfg
+        can = self.surveyed.get(tuple(map(float, box)))
+        if can is None:
+            dets = [d for d in self.grab.look("locate", read=False) if d["can"] is not None]
+            if not dets: raise Refused("I cannot measure the %s one. Please move it a little toward the middle of the table." % what)
+            best = max(dets, key=lambda d: iou(d["box"], box))
+            if iou(best["box"], box) < 0.3:
+                raise Refused("I lost the %s one when I measured it. Please ask again." % what)
+            can = best["can"]
+        c = self.cfg
         style = self.grab.style(can)
         if style == "too wide": raise Refused(REFUSALS["too wide"] % what)
         g, pre = grasp_points(can, c["below_top_cm"] / 100, c["pre_cm"] / 100, self.r.ws["z"][0] / 100.0)
