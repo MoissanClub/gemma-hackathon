@@ -6,8 +6,8 @@ motion and safety. A cloud model may decide *what* to do and *where*. Local code
 safe, and a dropped connection leads to "hold and ask", never to motion. This note plans how to benchmark candidate models for the
 four perception and action roles before relying on any of them.
 
-**Nothing below is measured.** No number in this note exists yet; every expected outcome is a prediction until the benchmarks run.
-The only measured figures quoted are existing E2B baselines, with their source.
+**Nothing below is measured**, except the section "Results so far" at the end. Every expected outcome is a prediction until the
+benchmarks run. The other measured figures quoted are existing E2B baselines, with their source.
 
 ## What to measure per role
 
@@ -92,3 +92,27 @@ has the wrist D405 view or our cans).
 3. Build a common model wrapper and a JSONL format in `bench/`.
 4. Run the cloud pointing models in parallel, then the local models one at a time.
 5. Write up the results with n and per-class counts, and pick a model for each role.
+
+## Results so far
+
+### Where2Place, Gemma 4 E2B (2026-10-25, laptop RTX 3070 via llama.cpp Vulkan; not Orin numbers)
+
+`bench/pointing.py --model gemma`; the dataset's own question per image; score = share of the answer's points inside the
+free-space mask, averaged over questions (RoboPoint's metric). Downloaded: Where2Place images, masks and questions (5.2 MB) into
+`bench/images-where2place/` (git-ignored). Run log: `runs/bench/pointing-20261025T114928-gemma.jsonl` (git-ignored).
+
+| Set | n | Mean score | Questions with any hit |
+| --- | --- | --- | --- |
+| all | 100 | 0.169 | 19 |
+| seen | 70 | 0.182 | 14 |
+| unseen | 30 | 0.137 | 5 |
+
+- Latency p50 0.72 s, p90 1.00 s; ~223 prompt tokens.
+- Format: 81 answers ignored the requested normalized `(x, y)` list and used Gemma's own `{"point": [y, x]}` on 0-1000 (mostly
+  one point; mean 0.185); 19 used the requested list (mean 0.097). `[y, x]` was checked by drawing images 00 and 02: read that way
+  the points land on the named mugs and in the drawer; read as `[x, y]` they land on unrelated objects.
+- Hand spot-check of 20 random answers drawn on the images: scores match the pictures; no malformed answer scored a hit. E2B
+  points at the object the sentence names ("left of the tissue box" -> on the tissue box), not at the free space the relation
+  describes. It grounds the noun and drops the spatial relation (consistent with §1 of `LEARNINGS.md`: it perceives, it does not
+  compose).
+
