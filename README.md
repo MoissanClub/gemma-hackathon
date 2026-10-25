@@ -29,7 +29,7 @@ request, after the image; code does geometry, motion and safety.** Brain v2 on t
 | --- | --- | --- | --- |
 | `mock` | runs end to end, fake or real Gemma | - | reference |
 | `g1` | adapter mapped, **not wired** | `embodiments/g1/brain/brain.py` (brain v2) | Junda |
-| `agilex` | skeleton | - | teammate |
+| `agilex` | dry run on the arm (look, choose, locate), motion untested | dual-piper-teleop `grab` (wrapped) | teammate |
 
 ## Quick start (Mac)
 
