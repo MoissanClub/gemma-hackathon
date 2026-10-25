@@ -116,3 +116,25 @@ free-space mask, averaged over questions (RoboPoint's metric). Downloaded: Where
   describes. It grounds the noun and drops the spatial relation (consistent with §1 of `LEARNINGS.md`: it perceives, it does not
   compose).
 
+### Where2Place, Molmo2-4B and Gemini Robotics-ER 2 (2026-10-25)
+
+Each model asked in its own point format; mask scoring as above. Downloaded: Molmo2-4B (`allenai/Molmo2-4B`, 19 GB, HF cache) and a
+venv at `~/.venvs/molmo2` (torch 2.14 + CUDA 13, transformers 4.57.1, bitsandbytes; 5.9 GB). Both outside the repo.
+
+| Model | Where | Prompt | n | Mean | Any hit | No points | p50 s |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Gemini Robotics-ER 2 Preview | cloud, free tier | instruction + Google's `[y, x]` 0-1000 JSON format | 20 | 0.908 | 19 | 0 | 3.6 |
+| Molmo2-4B, language model 4-bit nf4, vision bf16 | laptop RTX 3070 | instruction only (its own `<points>`) | 100 | 0.263 | 45 | 19 | 10.4 |
+| Gemma 4 E2B | laptop RTX 3070 | full question | 100 | 0.169 | 19 | 0 | 0.72 |
+| Gemma 4 E2B | laptop RTX 3070 | instruction only | 100 | 0.060 | 7 | 64 | 0.43 |
+
+- Same 20 questions (0-19): ER 2 0.908, Molmo2-4B 0.394, E2B 0.068.
+- Gemini stopped at 20: the free tier allows 20 requests per day per model (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`;
+  the 3-question smoke test counted). `--resume` continues the file. Free-tier content may be used by Google; these are public images.
+- Molmo2-4B: needs the Gemma server stopped on an 8 GB GPU (it rebuilds a 744 MB embedding table each step); its vision layer
+  norms fail in 4-bit, so the vision backbone stays bf16. Asked with the dataset's format sentence it mixed scales ("(0.23, 739)");
+  without it, it answers `<points coords=...>`, often 20+ points cut by the 200-token limit (parsed as given). Spot-check of 20:
+  it points into free space, sometimes the wrong free area or a line running past the region; 7/20 had no points.
+- E2B without the format sentence mostly stops pointing: it describes the surface, refuses, or says "Please provide an image"
+  (~20 times, with the image sent).
+

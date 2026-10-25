@@ -31,6 +31,11 @@ images: those results are a diagnostic, not navigation capability.
   gripper width) when it has any. `embodiments/g1/notes/ROBOT_RULES.md`
 - The native tool grammar does not enforce enums or ranges (validate client-side); the server rejects `grammar` with `tools`; the
   chat template sorts tool arguments alphabetically. `docs/LATENCY_RESULTS.md`
+- **E2B cannot point at a spatial relation; use a pointing model for "where".** Where2Place (100 real scenes, "free space left
+  of the mug", mask-scored): E2B 0.169 (it points *at* the named object, not beside it); Molmo2-4B 0.263 (local, 4-bit, ~10 s on a
+  3070 Laptop); Gemini Robotics-ER 2 0.908 on the first 20 (cloud, ~3.6 s; on those 20 Molmo2 0.394, E2B 0.068). E2B points as
+  `{"point": [y, x]}` on 0-1000 whatever format is asked, and without the explicit format sentence it mostly stops pointing.
+  `embodiments/agilex/notes/2026-10-25-benchmark-plan.md`
 
 ## 2. Latency levers (on-device)
 
