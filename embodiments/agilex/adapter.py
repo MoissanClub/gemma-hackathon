@@ -1,7 +1,7 @@
 """AgileX PiPER (6-DoF) with a Pika gripper and the Pika's wrist D405, on the shared Embodiment interface.
 
 A thin wrapper over the robot-proven see-and-grab code in dual-piper-teleop (`src/dualpiper/grab/`, docs/grab.md there): the arm,
-gripper and camera backend (`dualpiper.llm.real.PiperRobot`), the depth geometry (`Grab.look`: box -> can axis, top and diameter
+gripper and camera backend (`dualpiper.arm.robot.PiperRobot`), the depth geometry (`Grab.look`: box -> can axis, top and diameter
 from the D405, in the arm's base frame) and the grasp (`Grab._pick`: pre-grasp, measured correction from close up, straight
 approach with a contact stop, close, jaws judged against the measured diameter, 6 cm lift). Every number (view pose, workspace,
 camera calibration, gripper widths, grasp offsets) stays in that repo's configs with its provenance; none is set here.
@@ -58,7 +58,7 @@ class AgileX(Embodiment):
         from dualpiper.grab.__main__ import load_config
         from dualpiper.grab.gemma import Gemma as DptGemma
         from dualpiper.grab.skill import Grab
-        from dualpiper.llm.real import PiperRobot
+        from dualpiper.arm.robot import PiperRobot
         self.cfg = load_config(self.config)
         self.r = PiperRobot(self.cfg["llm_config"], motion=self.motion)
         confirm = (lambda p: True) if self.yes else (lambda p: input("  %s [Enter = yes, n = stop] " % p).strip().lower() != "n")
@@ -67,7 +67,7 @@ class AgileX(Embodiment):
                          out_dir=os.path.join(self.repo, "sessions", "grab"))
         self.grab.trial = {"id": "agilex-" + time.strftime("%Y%m%d-%H%M%S"), "params": dict(self.cfg)}
         if self.r.T_cam is None:
-            raise RuntimeError("camera not calibrated: python -m dualpiper.llm.calibrate in %s" % self.repo)
+            raise RuntimeError("camera not calibrated: python -m dualpiper.arm.board run in %s" % self.repo)
         if self.motion:
             self.say("Moving to my view pose.")
             self._check(self.r.go_view(), "the view pose")
@@ -191,7 +191,7 @@ class AgileX(Embodiment):
         """Grab._pick: approach, correct from close up, grasp, judge the jaws, lift. Refused before moving, SkillFailed after."""
         if not self.motion: raise Refused("My motion is switched off, so I will not pick it up.")
         from dualpiper.grab.skill import RESULT_SAY, Stop
-        from dualpiper.llm.real import Abort
+        from dualpiper.arm.robot import Abort
         can, rec = target.data["can"], {}
         self.grab.r.grip.set(self.grab.r.grip.open_mm)
         try: result = self.grab._pick(can, target.desc or self.cfg["label"], rec)
