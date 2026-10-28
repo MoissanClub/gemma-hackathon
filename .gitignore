@@ -5,9 +5,6 @@ __pycache__/
 *.gguf
 bench/images*/
 assets/
-# media stays out (slow uplinks); small fixtures only under embodiments/*/media/
-*.jpeg
-*.png
 *.wav
 *.aiff
 *.mp4

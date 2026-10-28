@@ -2,7 +2,11 @@
 
 Open `index.html` directly in Chrome, Safari, or Edge. Keep the `images/` folder beside it. No server, installation, or internet connection is needed.
 
-The presentation contains 12 main slides, 2 evidence appendices, animated charts, speaker notes, and sources. Copy the entire `presentation/` folder when moving it to another computer. Images are separate files referenced through relative paths.
+The presentation contains 12 main slides, 1 evidence appendix, animated charts, speaker notes, and sources. Copy the entire `presentation/` folder when moving it to another computer. Images are separate files referenced through relative paths.
+
+## Autoplay
+
+Autoplay starts automatically and loops the 12 main slides. The title stays for 20 seconds; other main slides stay for 15 seconds. The evidence appendix remains available manually. Press **P** or click the playback control to pause or resume. Notes, overview, editing, black screen, appendices, and a hidden browser tab suspend the timer. Manual slide changes restart the full interval for that slide.
 
 ## Controls
 
@@ -10,6 +14,7 @@ The presentation contains 12 main slides, 2 evidence appendices, animated charts
 | --- | --- |
 | Right / Space / Page Down | Next slide |
 | Left / Page Up | Previous slide |
+| P | Pause / resume autoplay |
 | F | Full screen |
 | O | Slide overview |
 | N | Speaker notes and evidence |
@@ -31,9 +36,9 @@ On the 12B/Thor slide, press **E** and replace the yellow task placeholder. The 
 
 Sources and scope are embedded in each slide's **N** panel. Model-size charts use the same-day October 22 Orin measurements. Code-generation times use complete-request wall medians from the saved experiment summaries. The LiteRT comparison is native spoken target choice, not complete robot pick time.
 
-PiPER, mobile SO-101, AGX Thor, and the latest G1 third-person automatic-calibration updates include the presenter's latest team reports. No unrecorded performance numbers are supplied for them.
+PiPER, LeKiwi Robot, AGX Thor, and the latest G1 third-person automatic-calibration updates include the presenter's latest team reports. No unrecorded performance numbers are supplied for them.
 
-Browser printing exposes all 14 slides. The file has no automatic external requests and uses system fonts.
+Browser printing exposes all 13 slides. The file has no automatic external requests and uses system fonts.
 
 ## Image files
 
@@ -49,3 +54,9 @@ You can crop or replace these files in an image editor. Keep the same filenames,
 `images/cover-g1.png` is the transparent cover cutout. `images/cover-original.jpg` preserves the original photograph. You can crop or replace either image with your own editor. The cover uses `object-fit: contain` and `object-position: center`, so the PNG itself controls the framing.
 
 The cover background was removed using the built-in image tool. Edit request: isolate the visible G1 arm, hand and held can on transparent alpha, remove people and room, and preserve the photographed pose and details.
+
+## Public judge link
+
+https://moissan-gemma-hackathon-slides.candycamel34.chatgpt.site
+
+Public access verified without credentials on October 24, 2026. The hosted snapshot includes only the HTML and its three referenced images. Hosting source and Site identity are in `/Users/junda/robot/gemma-slides-site/.openai/hosting.json`. Local edits require republishing to update this link.

@@ -39,7 +39,7 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
 <section class="slide cover active" data-title="One harness. Three robots." data-section="Moissan Club / Gemma Hardware Hackathon">
  <div class="cover-photo"><img class="photo" src="images/cover-g1.png" alt="G1 arm and hand holding a drink can, isolated on a transparent background"></div>
  <div class="cover-copy"><div class="eyebrow enter">Moissan Club</div><h1 class="enter" style="--i:1">One harness.<br>Three robots.</h1><p class="lead enter" style="--i:2">How far can <span class="gemma-word strong">Gemma 4</span> go<br>when the brain stays local?</p><div class="signature enter" style="--i:3"><span class="brand">gemma-hackathon</span><span class="small">AGI House · October 24, 2026</span></div></div>
- <p class="foot">Unitree G1 · AgileX PiPER · SO-101 on wheels</p>
+ <p class="foot">Unitree G1 · AgileX PiPER · LeKiwi Robot</p>
 </section>
 <section class="slide cloud" data-title="Why the brain stays local" data-section="01 / Motivation">
  <div class="eyebrow enter">The starting point</div><h2 class="enter" style="--i:1">Cloud models showed us<br>what was possible</h2>
@@ -54,7 +54,7 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
 <section class="slide" data-title="The question format changes the result" data-section="03 / Benchmarking the loop">
  <div class="eyebrow enter">Gemma 4 E2B on the G1</div><h2 class="enter" style="--i:1">The question format<br>changes the result</h2>
  <div class="fast-layout"><div class="enter" style="--i:2"><div class="metric-line"><div><div class="label">One-word perception</div><div class="under">77 / 78 correct</div></div><div class="num blue">320<span style="font-size:30px"> ms</span></div></div><div class="metric-line"><div><div class="label">Structured tool call</div><div class="under">76 / 78 correct</div></div><div class="num purple">686<span style="font-size:30px"> ms</span></div></div><div class="metric-line"><div><div class="label">Object bounding box</div><div class="under">78 / 78 correct</div></div><div class="num mint">772<span style="font-size:30px"> ms</span></div></div></div><div class="sequence enter" style="--i:3"><p><span class="index">MODEL CONFIGURATION</span>Thinking off for direct perception.<br>Short, grounded answers.</p><p><span class="index">INPUT AND RUNTIME</span>Right-sized images.<br>Warm prefixes. Few output tokens.</p><p class="punch">The harness asks the model<br>a question it can answer well.</p></div></div>
- <p class="foot">Oct 18, Orin NX, MAXN with pinned clocks, llama.cpp CUDA. 78 crops from 3 generated kitchen scenes. Perception diagnostic, not a physical-task success rate.</p>
+ <p class="foot">Orin NX, MAXN with pinned clocks, llama.cpp CUDA. 78 crops from 3 generated kitchen scenes. Perception diagnostic, not a physical-task success rate.</p>
 </section>
 <section class="slide" data-title="Model size and perception latency" data-section="04 / The model-size trade-off">
  <div class="eyebrow enter">Same-day comparison on Orin NX</div><h2 class="enter" style="--i:1">More parameters cost time</h2>
@@ -64,7 +64,7 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
  <div class="model-row"><span class="model-label purple">E4B</span><div class="bar-track"><div class="bar-fill" style="--width:54%;--bar:var(--purple)"></div></div><span class="latency">1,499 ms</span><span class="score">78 / 78</span></div>
  <div class="model-row"><span class="model-label mint">12B</span><div class="bar-track"><div class="bar-fill" style="--width:100%;--bar:var(--mint)"></div></div><span class="latency">2,778 ms</span><span class="score">78 / 78</span></div></div>
  <div class="model-caption enter" style="--i:3"><p class="body" id="perception-takeaway">E2B already solves this diagnostic.<br>12B gives tighter boxes, with a longer wait.</p><p class="ram">Peak board RAM<br>E2B 5.8 GB · E4B 8.6 GB · 12B 11.4 GB</p></div>
- <p class="foot">Oct 22, MAXN, clocks unpinned, thinking off. Same 78-frame diagnostic. Quantization differs; prompts were tuned on E2B. Press C to change the view.</p>
+ <p class="foot"> MAXN, clocks unpinned, thinking off. Same 78-frame diagnostic. Quantization differs; prompts were tuned on E2B. Press C to change the view.</p>
 </section>
 <section class="slide codegen" data-title="Larger models help compose tasks" data-section="05 / Correctness versus delay">
  <div class="eyebrow enter">Generating a fresh task program</div><h2 class="enter" style="--i:1">Here, model size earns its keep</h2>
@@ -78,12 +78,12 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
 <section class="slide" data-title="LiteRT GPU on the G1" data-section="06 / Google AI Edge">
  <div class="eyebrow enter">A working second inference backend</div><h2 class="enter" style="--i:1"><span class="blue">LiteRT GPU</span> runs on the G1</h2>
  <div class="runtime-layout"><div class="enter" style="--i:2"><div class="runtime-row"><div class="top"><span class="name">llama.cpp CUDA</span><span class="num">168<span style="font-size:30px"> ms</span></span></div><div class="bar-track"><div class="bar-fill" style="--width:26.75%;--bar:var(--blue)"></div></div></div><div class="runtime-row"><div class="top"><span class="name">LiteRT-LM GPU</span><span class="num mint">628<span style="font-size:30px"> ms</span></span></div><div class="bar-track"><div class="bar-fill" style="--width:100%;--bar:var(--mint)"></div></div></div><p class="body gap">Native speech to target choice.<br>LiteRT adds 460 ms in this comparison.</p></div><div class="runtime-detail enter" style="--i:3"><div class="num mint">26 / 28</div><p class="body">Both runtimes reached the same score,<br>with different individual misses.</p><div class="coexist"><p class="body">WebGPU on Vulkan<br>NVIDIA Tegra Orin adapter</p><p class="small gap">Both engines resident: 7.3 GB board RAM.<br>CUDA image gate stayed near 320 ms.</p></div></div></div>
- <p class="foot">Oct 22, LiteRT-LM 0.18.0, E2B, MAXN, unpinned clocks. 14 clips repeated twice. Application-level comparison with different bundles and prefix caching. Coexistence excludes the full robot stack.</p>
+ <p class="foot">LiteRT-LM 0.18.0, E2B, MAXN, unpinned clocks. 14 clips repeated twice. Application-level comparison with different bundles and prefix caching. Coexistence excludes the full robot stack.</p>
 </section>
 <section class="slide" data-title="The same approach across three bodies" data-section="07 / Cross-embodiment">
  <div class="eyebrow enter">Minimal adaptation at the robot boundary</div><h2 class="enter" style="--i:1">One task interface.<br>Very different bodies.</h2>
- <div class="embodiments"><div class="robot-column enter" style="--i:2"><div class="ordinal">01 / HUMANOID</div><h3 class="blue">Unitree G1</h3><p class="body">Jetson Orin NX 16 GB<br>BrainCo hand</p><p class="small gap">Our original physical benchmark</p></div><div class="robot-column enter" style="--i:3"><div class="ordinal">02 / ROBOT ARM</div><h3 class="purple">AgileX PiPER</h3><p class="body">Alienware laptop<br>NVIDIA GPU</p><p class="small gap">Independent teammate port<br>Only low-level robot control changed</p></div><div class="robot-column enter" style="--i:4"><div class="ordinal">03 / MOBILE ARM</div><h3 class="mint">SO-101<br>on wheels</h3><p class="body">The same harness approach<br>in a mobile embodiment</p><p class="small gap">The latest team extension</p></div></div>
- <p class="shared-line enter" style="--i:5">The prompts and task logic travel.<br>Each robot supplies its own execution and calibration.</p><p class="foot">PiPER and mobile SO-101 deployments are team-reported results. Task portability does not imply identical motor controllers or zero hardware setup.</p>
+ <div class="embodiments"><div class="robot-column enter" style="--i:2"><div class="ordinal">01 / HUMANOID</div><h3 class="blue">Unitree G1</h3><p class="body">Jetson Orin NX 16 GB<br>BrainCo hand</p><p class="small gap">Our original physical benchmark</p></div><div class="robot-column enter" style="--i:3"><div class="ordinal">02 / ROBOT ARM</div><h3 class="purple">AgileX PiPER</h3><p class="body">Alienware laptop<br>NVIDIA GPU</p><p class="small gap">Independent teammate port<br>Only low-level robot control changed</p></div><div class="robot-column enter" style="--i:4"><div class="ordinal">03 / MOBILE ARM</div><h3 class="mint">LeKiwi Robot</h3><p class="body">The same harness approach<br>in a mobile embodiment</p><p class="small gap">The latest team extension</p></div></div>
+ <p class="shared-line enter" style="--i:5">The prompts and task logic travel.<br>Each robot supplies its own execution and calibration.</p><p class="foot">PiPER and LeKiwi Robot deployments are team-reported results. Task portability does not imply identical motor controllers or zero hardware setup.</p>
 </section>
 <section class="slide" data-title="The abstraction is the product" data-section="08 / Harness design">
  <div class="eyebrow enter">The useful boundary</div><h2 class="enter" style="--i:1">Gemma resolves meaning.<br>The harness makes it executable.</h2>
@@ -114,64 +114,213 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
  <p class="invitation enter" style="--i:4">Order in your language. Choose by the picture.</p><p class="thanks">Built with Gemma 4 and Google AI Edge. Thanks to the Gemma and LiteRT teams.<br><span class="mono">github.com/MoissanClub/gemma-hackathon</span></p>
 </section>
 <section class="slide appendix" data-title="Appendix: the measured model table" data-section="Appendix / Recorded results">
- <div class="eyebrow">Orin NX 16 GB · October 22</div><h2>The measured model table</h2>
+ <div class="eyebrow">Orin NX 16 GB</div><h2>The measured model table</h2>
  <table class="evidence-table"><thead><tr><th>Metric</th><th>E2B</th><th>E4B</th><th>12B</th></tr></thead><tbody><tr><td>One-word perception, correct</td><td>77 / 78</td><td>69 / 78</td><td>75 / 78</td></tr><tr><td>One-word perception, median request</td><td>368 ms</td><td>532 ms</td><td>829 ms</td></tr><tr><td>Bounding box, correct</td><td>78 / 78</td><td>78 / 78</td><td>78 / 78</td></tr><tr><td>Bounding box, median request</td><td>839 ms</td><td>1,499 ms</td><td>2,778 ms</td></tr><tr><td>Basic task programs, passed</td><td>2 / 9</td><td>8 / 9</td><td>8 / 9</td></tr><tr><td>Generation request, median wall time</td><td>4.96 s</td><td>4.25 s</td><td>12.20 s</td></tr><tr><td>Peak board RAM during model runs</td><td>5.8 GB</td><td>8.6 GB</td><td>11.4 GB</td></tr></tbody></table>
  <p class="foot">MAXN, clocks unpinned, thinking off. Prompts tuned on E2B; different quantization variants. Program correctness uses mocks. Full sources and limitations are in the speaker notes.</p>
 </section>
-<section class="slide appendix" data-title="Appendix: methods and evidence" data-section="Appendix / Reproducibility">
- <div class="eyebrow">The evidence behind the slides</div><h2>Methods and scope</h2>
- <div class="source-list"><p><strong>Fast perception</strong><br><span class="mono">docs/LATENCY_RESULTS.md</span><br>78 transformed views from 3 generated kitchen scenes. Fresh-image timing, not repeated-image cache hits.</p><p><strong>Model sizes and generated programs</strong><br><span class="mono">docs/2026-10-22-orin-model-sizes.md</span><br>Saved request summaries cross-checked. One sample per task, multiple mock layouts.</p><p><strong>LiteRT GPU comparison</strong><br><span class="mono">docs/2026-10-22-litert-gpu.md</span><br>14 audio clips repeated twice. Median target-choice latency, not complete pick latency.</p><p><strong>Physical feedback and cross-embodiment</strong><br><span class="mono">LEARNINGS.md · embodiments/g1/notes/ · latest team reports</span><br>Runtime calibration is distinct from future model post-training.</p></div>
- <p class="foot">Parent harness methods, raw summaries, calibration source and robot notes reviewed alongside the extracted gemma-hackathon repo.</p>
-</section>
-<div id="section-label" aria-hidden="true"></div><nav id="chrome" aria-label="Presentation controls"><button id="prev" title="Previous slide (Left arrow)">←</button><span id="counter" aria-live="polite">1 / 12</span><button id="next" title="Next slide (Right arrow)">→</button><span class="spacer"></span><span>Fully local</span><button id="overview-btn">Overview O</button><button id="notes-btn">Notes N</button><button id="fullscreen-btn">Full screen F</button><button id="help-btn">?</button></nav><div id="progress"></div><div id="blackout" aria-label="Black screen"></div>
+<div id="section-label" aria-hidden="true"></div><nav id="chrome" aria-label="Presentation controls"><button id="prev" title="Previous slide (Left arrow)">←</button><span id="counter" aria-live="polite">1 / 12</span><button id="next" title="Next slide (Right arrow)">→</button><span class="spacer"></span><span>Fully local</span><button id="autoplay-btn" aria-pressed="true" title="Pause autoplay (P)">Pause P</button><button id="overview-btn">Overview O</button><button id="notes-btn">Notes N</button><button id="fullscreen-btn">Full screen F</button><button id="help-btn">?</button></nav><div id="progress"></div><div id="blackout" aria-label="Black screen"></div>
 <aside id="notes" class="overlay" role="dialog" aria-modal="true" aria-label="Speaker notes"><button class="close">Close · Esc</button><h2 id="notes-title"></h2><div class="notes-body" id="notes-body"></div><div class="notes-sources" id="notes-sources"></div></aside>
 <aside id="overview" class="overlay" role="dialog" aria-modal="true" aria-label="Slide overview"><button class="close">Close · Esc</button><h2>Slide overview</h2><div class="overview-grid" id="overview-grid"></div></aside>
-<aside id="help" class="overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><button class="close">Close · Esc</button><h2>Presentation controls</h2><div class="help-grid"><div><kbd>→ / Space / PgDn</kbd>Next slide</div><div><kbd>← / PgUp</kbd>Previous slide</div><div><kbd>F</kbd>Full screen</div><div><kbd>O</kbd>Slide overview</div><div><kbd>N</kbd>Speaker notes and sources</div><div><kbd>B / .</kbd>Black screen</div><div><kbd>C</kbd>Change perception chart</div><div><kbd>R</kbd>Replay slide animation</div><div><kbd>E</kbd>Edit the Thor task placeholder</div><div><kbd>M</kbd>Reduce motion</div><div><kbd>Home / End</kbd>First / closing slide</div><div><kbd>A</kbd>Benchmark appendix</div></div><p class="body topgap">No internet, server, fonts, or libraries required. Keep the images folder next to this HTML file. Click the left or right edge to navigate. Swipe on touch screens.</p><p class="small gap">The Thor task edit saves in this browser when local storage is available. Speaker notes and sources are embedded. Photos use relative paths into the images folder. Printing exports all slides.</p></aside>
+<aside id="help" class="overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><button class="close">Close · Esc</button><h2>Presentation controls</h2><div class="help-grid"><div><kbd>→ / Space / PgDn</kbd>Next slide</div><div><kbd>← / PgUp</kbd>Previous slide</div><div><kbd>P</kbd>Pause / resume autoplay</div><div><kbd>F</kbd>Full screen</div><div><kbd>O</kbd>Slide overview</div><div><kbd>N</kbd>Speaker notes and sources</div><div><kbd>B / .</kbd>Black screen</div><div><kbd>C</kbd>Change perception chart</div><div><kbd>R</kbd>Replay slide animation</div><div><kbd>E</kbd>Edit the Thor task placeholder</div><div><kbd>M</kbd>Reduce motion</div><div><kbd>Home / End</kbd>First / closing slide</div><div><kbd>A</kbd>Benchmark appendix</div></div><p class="body topgap">Autoplay loops the 12 main slides: 20 seconds on the title, 15 seconds on each other slide. Notes, overview, editing and appendices pause the timer. Keep the images folder next to this HTML file. Click the left or right edge to navigate. Swipe on touch screens.</p><p class="small gap">The Thor task edit saves in this browser when local storage is available. Speaker notes and sources are embedded. Photos use relative paths into the images folder. Printing exports all slides.</p></aside>
 </main><script>
 'use strict';
 const NOTES=[
- {text:['Open with the live robot or point to the real grasp photo. Our question is how much useful physical intelligence fits on the robot.','This is gemma-hackathon, extracted from the longer harness project. The common task interface is the product idea. G1, PiPER and SO-101 have different physical controllers.','Cover: a background-removed cutout derived from a real G1 can-lift photo. It is not a new scene or a claim of universal autonomous serving.'],sources:['README.md; LEARNINGS.md','images/cover-g1.png; original retained as images/cover-original.jpg','PiPER and SO-101 deployments: presenter/team reports in this conversation, October 24, 2026.']},
- {text:['We have seen strong capability with GPT6 Astra. That motivated the question, rather than a claim that small local models match a frontier cloud model.','Local inference removes the external network round trip and API-service dependence. It does not make the robot infallible, eliminate energy cost or establish a numerical cost advantage.','Pause for the AGI House Wi-Fi joke. This slide and the entire deck operate without network requests. The cloud capability statement is our experience, not a head-to-head benchmark.'],sources:['Presenter-supplied project motivation and venue connectivity experience, October 24, 2026.']},
- {text:['Ask for a drink by color, label, fruit picture, or a tested language. The native Gemma audio path understands the request directly. Separate TTS provides spoken replies.','The baseline uses stock instruction-tuned QAT checkpoints with quantized inference. We performed no task-specific model training. “Vanilla” does not mean the publisher never instruction-tuned or quantization-trained the model.','Any language is the demonstration premise, not a claim that every language/accent has been validated. We have fixture and limited real-microphone results.','The head-camera image shows similarly colored cans with different fruit pictures. More detail and sufficient image resolution matter.'],sources:['core/gemma.py; LEARNINGS.md; docs/2026-10-22-litert-gpu.md','Parent: hackathon/spikes/2026-10-23-v2-grasp/runs-pc2/20261024T035520/order_01/bundle_look_color.jpg']},
- {text:['These are pinned-MAXN October 18 measurements, deliberately separate from the unpinned October 22 size comparison.','We varied output format, thinking, prompt ordering, image budget, prefix reuse and output length. Direct grounded questions worked much better than asking E2B for a whole plan.','The 78 views are crops/mirrors from three generated kitchen scenes, not 78 independent environments. Correctness is the benchmark rubric, not grasp success.','A valid tool call is not a correct decision, and an accepted robot command is not an observed physical result.'],sources:['embodiments/g1/notes/2026-10-18-orin-sunday.md','docs/LATENCY_RESULTS.md','Parent: FORMAT_RESULTS.md; THINKING_RESULTS.md; E2B_RESULTS.md; TOKEN_BUDGET_NOTES.md; TURN_RESULTS.md']},
- {text:['Use C or the chart buttons to switch between box and one-word results. All three model sizes ran on the same Orin NX under the same unpinned MAXN conditions on October 22.','Bounding-box correctness was 78/78 for each model. 12B had lower normalized box x error (0.005 versus E2B 0.017), but was substantially slower.','One-word results: E2B 77/78 at 367.7 ms; E4B 69/78 at 532.4 ms; 12B 75/78 at 829.3 ms. Many larger-model errors were close to the labeling boundary.','This does not establish that larger models perceive worse in general. Quantization differs and prompts were tuned on E2B. Peak RAM refers to the board during these model runs.'],sources:['docs/2026-10-22-orin-model-sizes.md','Parent raw summaries: experiments/20261022T182330.849459Z-latency-orin-e2b-unpinned/summary.json; 20261022T182718.689134Z-latency-orin-e4b-unpinned/summary.json; 20261022T183312.995044Z-latency-orin-12b-unpinned/summary.json']},
- {text:['The important result: model choice depends on the job. E2B is excellent for short perception calls. E4B is the strongest observed basic-codegen trade-off in this small suite.','Use actual request wall medians 4.96 / 4.25 / 12.20 seconds. The prose report rounds server prompt-plus-decode times to 4.7 / 4.2 / 12.2 seconds, a different timing definition.','Nine tasks, one greedy sample each. Each program passed only if every one of its two or three mock layouts reached the correct final state with no refused call or exception.','Code inference ran on Orin but execution ran in host-side mocks. This does not establish physical-task completion. Hard set: 12B 3/6, 16.665 seconds wall median. E4B hard set remains untested.'],sources:['docs/2026-10-22-orin-model-sizes.md; bench/codegen_probe.py','Parent experiments: 20261022T182614.396866Z-codegen-orin-e2b-unpinned; 20261022T183149.919784Z-codegen-orin-e4b-unpinned; 20261022T184110.797579Z-codegen-orin-12b-unpinned; 20261022T184433.829212Z-codegen-hard-orin-12b-unpinned']},
- {text:['LiteRT-LM 0.18.0 genuinely ran on the NVIDIA Tegra Orin GPU through WebGPU/Vulkan. Audio encoding remained on CPU. This is measured target operation, not merely a support claim.','The v2 fixture set contains fourteen clips, each repeated twice: both runtimes scored 26/28. They failed different individual requests. Most recordings are synthetic, with one C922 recording.','Median complete choice request: LiteRT 628 ms; llama.cpp 168 ms. Prefix caching and model bundles differ, so this is an application-path comparison rather than isolated kernel speed.','Both resident: LiteRT 629 ms; llama image gate 319.8 ms versus 321.5 ms solo; board RAM used 7.3 GB. This coexistence test did not include the full running detector/robot stack.','Stage B used the prebuilt GPU top-k sampler. The older GPU hang did not reproduce; its root cause was not established.'],sources:['docs/2026-10-22-litert-gpu.md','Parent hackathon/spikes/2026-10-22-litert-gpu/orders.jsonl; report_pc2-unpinned-1.txt','https://github.com/google-ai-edge/litert-samples/tree/main/samples/platforms/nvidia']},
- {text:['PiPER is the strongest external reuse evidence: a Moissan Club member ported the approach to her AgileX arm using an Alienware NVIDIA GPU laptop. The presenter reports that prompts/task logic remained unchanged and low-level control differed.','SO-101 on wheels is the latest presenter-reported extension. No adaptation line counts, SO-101 timing or completion percentages are claimed.','The freshly extracted repository contains the common core and adapter contract, but its checked-in generic G1 bridge is not fully wired and the AgileX adapter is a skeleton. The successful external ports are team results, not a claim that these skeleton files already reproduce the demonstrations.','Cross-embodiment task portability is different from transferring a learned motor policy.'],sources:['README.md; core/embodiment.py; embodiments/agilex/README.md','Presenter/team reports, October 21–24, 2026.']},
- {text:['The abstraction carries meaning and task intent. The common core does not deal in joints, frame transforms or finger commands. Each embodiment supplies those.','Shared API: look, pick, give, place, say, listen, wave. The common task logic can coordinate existing capabilities across different bodies.','Zero-shot refers to interpreting novel requests/appearances without task-specific weight updates. It does not mean no camera calibration, robot integration, prompt engineering, verified skills or physical setup.','Historical experiments showed perfect API syntax could coexist with poor task semantics. The useful boundary is model understanding plus explicit geometry, control and outcome checks.'],sources:['core/embodiment.py; core/loop.py; core/robot_api.py; core/gemma.py; tasks/give_leftmost.py','Parent TASK_CHUNK_PROPOSAL.md; NEXT_EXPERIMENT.md; FORMAT_RESULTS.md; THINKING_RESULTS.md']},
- {text:['The presenter confirmed on October 24 that automatic calibration through the third-person camera has successfully run on G1. We include that latest team result without inventing a numeric gain.','The image here is the documented head-camera hand/object measurement. It illustrates the existing measurement path and must not be described as a third-person image.','Older checked-in code uses head RGB-depth servo and proprioceptive sag correction, and uses the third-person grasp check as advisory. The newer auto-calibration result is supplied by the presenter, beyond those notes.','The older 2–4 mm pre-grasp correction result belongs to that head/proprioceptive path. Do not attribute it to the newer outside-camera loop. Calibration updates do not constitute model post-training.'],sources:['Presenter confirmation, October 24, 2026: third-person automatic calibration has run successfully on G1.','LEARNINGS.md; embodiments/g1/brain/{brain.py,motion.py,geom.py,calib.py}; embodiments/g1/notes/2026-10-23-v2-grasp.md','Parent image: hackathon/spikes/2026-10-23-v2-grasp/runs-pc2/20261024T035520/order_01/measure_servo0.jpg']},
- {text:['The code is a compact illustration of control flow over the shared API, based on tasks/give_leftmost.py, not a literal captured model output. x increases to the robot’s left; this illustration assumes localized candidates.','12B did write correct programs for eight of nine basic tasks but took 12.20 seconds wall median on the Orin. It was too slow for our desired live interaction pace.','The team reports some success on AGX Thor. There is no recorded timing or concrete task supplied yet. Replace the yellow placeholder before presenting this slide, using E.','Generated code can compose existing pick/offer/place capabilities. It cannot create a missing grasp controller just by naming a skill.'],sources:['docs/2026-10-22-orin-model-sizes.md; bench/codegen_probe.py; core/robot_api.py; tasks/give_leftmost.py','AGX Thor experiment: presenter report, October 24, 2026. Task example intentionally left editable at presenter request.']},
- {text:['Close with specific appreciation: Gemma provides compact native audio/vision, grounded semantic decisions and stronger task composition at larger sizes, all in open local weights. LiteRT adds a second functioning GPU deployment path.','Our current baseline has no task-specific post-training. Future post-training aims at fewer generated tokens, better ambiguity handling, stronger task programs and lower latency per successful task. These are research goals, not already measured gains.','Runtime calibration and future weight updates are distinct forms of improvement.','Invite a live request in a tested language and by a visible picture. Keep the live demo within the verified hardware envelope. A safety operator is not hidden teleoperation; describe any assistance honestly.'],sources:['LEARNINGS.md; docs/2026-10-22-litert-gpu.md; docs/2026-10-22-orin-model-sizes.md','https://github.com/MoissanClub/gemma-hackathon','Presenter-supplied future-work direction.']},
- {text:['This appendix combines same-day October 22 model-size results only. All model-size timing uses the unpinned MAXN run. Code generation uses request wall-clock medians cross-checked against saved summaries.','Raw values before rounding: word 367.7 / 532.4 / 829.3 ms; boxes 838.7 / 1498.8 / 2778.2 ms.','The larger models were not audio-evaluated in this comparison. Do not infer their speech accuracy from these vision/code figures.'],sources:['docs/2026-10-22-orin-model-sizes.md; underlying parent experiments/ summary.json files listed on the corresponding slides.']},
- {text:['Sources are embedded as text so the evidence remains inspectable offline. The documentation paths are relative to gemma-hackathon, with parent harness paths noted when raw artifacts remain there.','The related parent harness benchmark reports, request defaults, server flags, task chunk proposal, codegen checker and calibration/robot notes were reviewed for this presentation. The copied measurement docs are identical to the corresponding parent versions.','Important boundaries: synthetic perception diagnostic versus actual robot behavior; mock program execution versus physical task completion; fixture audio versus venue voice performance; old source snapshots versus the team’s latest demonstrations.'],sources:['Parent: AGENTS.md; CLAUDE.md; RESULTS.md; TURN_RESULTS.md; FORMAT_RESULTS.md; THINKING_RESULTS.md; E2B_RESULTS.md; TOKEN_BUDGET_NOTES.md; LATENCY_RESULTS.md; TASK_CHUNK_PROPOSAL.md; NEXT_EXPERIMENT.md','Parent: request-defaults.json; runner-defaults.json; evaluation-sampling.json; bench/codegen_probe.py; serving scripts; Oct 18 / Oct 22 / Oct 23 spike docs and actual summaries','Extracted repo: README.md; LEARNINGS.md; core/; docs/; embodiments/g1/brain/ and notes/','Latest qualitative updates: presenter/team confirmation in this conversation, October 24, 2026.']}
+ {
+  "text": [
+   "Open with the live robot or point to the real grasp photo. Our question is how much useful physical intelligence fits on the robot.",
+   "This is gemma-hackathon, extracted from the longer harness project. The common task interface is the product idea. G1, PiPER and LeKiwi Robot have different physical controllers.",
+   "Cover: a background-removed cutout derived from a real G1 can-lift photo. It is not a new scene or a claim of universal autonomous serving."
+  ],
+  "sources": [
+   "README.md; LEARNINGS.md",
+   "images/cover-g1.png; original retained as images/cover-original.jpg",
+   "PiPER and LeKiwi Robot deployments: presenter/team reports in this conversation, October 24, 2026."
+  ]
+ },
+ {
+  "text": [
+   "We have seen strong capability with GPT6 Astra. That motivated the question, rather than a claim that small local models match a frontier cloud model.",
+   "Local inference removes the external network round trip and API-service dependence. It does not make the robot infallible, eliminate energy cost or establish a numerical cost advantage.",
+   "Pause for the AGI House Wi-Fi joke. This slide and the entire deck operate without network requests. The cloud capability statement is our experience, not a head-to-head benchmark."
+  ],
+  "sources": [
+   "Presenter-supplied project motivation and venue connectivity experience, October 24, 2026."
+  ]
+ },
+ {
+  "text": [
+   "Ask for a drink by color, label, fruit picture, or a tested language. The native Gemma audio path understands the request directly. Separate TTS provides spoken replies.",
+   "The baseline uses stock instruction-tuned QAT checkpoints with quantized inference. We performed no task-specific model training. “Vanilla” does not mean the publisher never instruction-tuned or quantization-trained the model.",
+   "Any language is the demonstration premise, not a claim that every language/accent has been validated. We have fixture and limited real-microphone results.",
+   "The head-camera image shows similarly colored cans with different fruit pictures. More detail and sufficient image resolution matter."
+  ],
+  "sources": [
+   "core/gemma.py; LEARNINGS.md; docs/2026-10-22-litert-gpu.md",
+   "Parent: hackathon/spikes/2026-10-23-v2-grasp/runs-pc2/20261024T035520/order_01/bundle_look_color.jpg"
+  ]
+ },
+ {
+  "text": [
+   "These are pinned-MAXN October 18 measurements, deliberately separate from the unpinned October 22 size comparison.",
+   "We varied output format, thinking, prompt ordering, image budget, prefix reuse and output length. Direct grounded questions worked much better than asking E2B for a whole plan.",
+   "The 78 views are crops/mirrors from three generated kitchen scenes, not 78 independent environments. Correctness is the benchmark rubric, not grasp success.",
+   "A valid tool call is not a correct decision, and an accepted robot command is not an observed physical result."
+  ],
+  "sources": [
+   "embodiments/g1/notes/2026-10-18-orin-sunday.md",
+   "docs/LATENCY_RESULTS.md",
+   "Parent: FORMAT_RESULTS.md; THINKING_RESULTS.md; E2B_RESULTS.md; TOKEN_BUDGET_NOTES.md; TURN_RESULTS.md"
+  ]
+ },
+ {
+  "text": [
+   "Use C or the chart buttons to switch between box and one-word results. All three model sizes ran on the same Orin NX under the same unpinned MAXN conditions on October 22.",
+   "Bounding-box correctness was 78/78 for each model. 12B had lower normalized box x error (0.005 versus E2B 0.017), but was substantially slower.",
+   "One-word results: E2B 77/78 at 367.7 ms; E4B 69/78 at 532.4 ms; 12B 75/78 at 829.3 ms. Many larger-model errors were close to the labeling boundary.",
+   "This does not establish that larger models perceive worse in general. Quantization differs and prompts were tuned on E2B. Peak RAM refers to the board during these model runs."
+  ],
+  "sources": [
+   "docs/2026-10-22-orin-model-sizes.md",
+   "Parent raw summaries: experiments/20261022T182330.849459Z-latency-orin-e2b-unpinned/summary.json; 20261022T182718.689134Z-latency-orin-e4b-unpinned/summary.json; 20261022T183312.995044Z-latency-orin-12b-unpinned/summary.json"
+  ]
+ },
+ {
+  "text": [
+   "The important result: model choice depends on the job. E2B is excellent for short perception calls. E4B is the strongest observed basic-codegen trade-off in this small suite.",
+   "Use actual request wall medians 4.96 / 4.25 / 12.20 seconds. The prose report rounds server prompt-plus-decode times to 4.7 / 4.2 / 12.2 seconds, a different timing definition.",
+   "Nine tasks, one greedy sample each. Each program passed only if every one of its two or three mock layouts reached the correct final state with no refused call or exception.",
+   "Code inference ran on Orin but execution ran in host-side mocks. This does not establish physical-task completion. Hard set: 12B 3/6, 16.665 seconds wall median. E4B hard set remains untested."
+  ],
+  "sources": [
+   "docs/2026-10-22-orin-model-sizes.md; bench/codegen_probe.py",
+   "Parent experiments: 20261022T182614.396866Z-codegen-orin-e2b-unpinned; 20261022T183149.919784Z-codegen-orin-e4b-unpinned; 20261022T184110.797579Z-codegen-orin-12b-unpinned; 20261022T184433.829212Z-codegen-hard-orin-12b-unpinned"
+  ]
+ },
+ {
+  "text": [
+   "LiteRT-LM 0.18.0 genuinely ran on the NVIDIA Tegra Orin GPU through WebGPU/Vulkan. Audio encoding remained on CPU. This is measured target operation, not merely a support claim.",
+   "The v2 fixture set contains fourteen clips, each repeated twice: both runtimes scored 26/28. They failed different individual requests. Most recordings are synthetic, with one C922 recording.",
+   "Median complete choice request: LiteRT 628 ms; llama.cpp 168 ms. Prefix caching and model bundles differ, so this is an application-path comparison rather than isolated kernel speed.",
+   "Both resident: LiteRT 629 ms; llama image gate 319.8 ms versus 321.5 ms solo; board RAM used 7.3 GB. This coexistence test did not include the full running detector/robot stack.",
+   "Stage B used the prebuilt GPU top-k sampler. The older GPU hang did not reproduce; its root cause was not established."
+  ],
+  "sources": [
+   "docs/2026-10-22-litert-gpu.md",
+   "Parent hackathon/spikes/2026-10-22-litert-gpu/orders.jsonl; report_pc2-unpinned-1.txt",
+   "https://github.com/google-ai-edge/litert-samples/tree/main/samples/platforms/nvidia"
+  ]
+ },
+ {
+  "text": [
+   "PiPER is the strongest external reuse evidence: a Moissan Club member ported the approach to her AgileX arm using an Alienware NVIDIA GPU laptop. The presenter reports that prompts/task logic remained unchanged and low-level control differed.",
+   "LeKiwi Robot is the latest presenter-reported extension. No adaptation line counts, LeKiwi Robot timing or completion percentages are claimed.",
+   "The freshly extracted repository contains the common core and adapter contract, but its checked-in generic G1 bridge is not fully wired and the AgileX adapter is a skeleton. The successful external ports are team results, not a claim that these skeleton files already reproduce the demonstrations.",
+   "Cross-embodiment task portability is different from transferring a learned motor policy."
+  ],
+  "sources": [
+   "README.md; core/embodiment.py; embodiments/agilex/README.md",
+   "Presenter/team reports, October 21–24, 2026."
+  ]
+ },
+ {
+  "text": [
+   "The abstraction carries meaning and task intent. The common core does not deal in joints, frame transforms or finger commands. Each embodiment supplies those.",
+   "Shared API: look, pick, give, place, say, listen, wave. The common task logic can coordinate existing capabilities across different bodies.",
+   "Zero-shot refers to interpreting novel requests/appearances without task-specific weight updates. It does not mean no camera calibration, robot integration, prompt engineering, verified skills or physical setup.",
+   "Historical experiments showed perfect API syntax could coexist with poor task semantics. The useful boundary is model understanding plus explicit geometry, control and outcome checks."
+  ],
+  "sources": [
+   "core/embodiment.py; core/loop.py; core/robot_api.py; core/gemma.py; tasks/give_leftmost.py",
+   "Parent TASK_CHUNK_PROPOSAL.md; NEXT_EXPERIMENT.md; FORMAT_RESULTS.md; THINKING_RESULTS.md"
+  ]
+ },
+ {
+  "text": [
+   "The presenter confirmed on October 24 that automatic calibration through the third-person camera has successfully run on G1. We include that latest team result without inventing a numeric gain.",
+   "The image here is the documented head-camera hand/object measurement. It illustrates the existing measurement path and must not be described as a third-person image.",
+   "Older checked-in code uses head RGB-depth servo and proprioceptive sag correction, and uses the third-person grasp check as advisory. The newer auto-calibration result is supplied by the presenter, beyond those notes.",
+   "The older 2–4 mm pre-grasp correction result belongs to that head/proprioceptive path. Do not attribute it to the newer outside-camera loop. Calibration updates do not constitute model post-training."
+  ],
+  "sources": [
+   "Presenter confirmation, October 24, 2026: third-person automatic calibration has run successfully on G1.",
+   "LEARNINGS.md; embodiments/g1/brain/{brain.py,motion.py,geom.py,calib.py}; embodiments/g1/notes/2026-10-23-v2-grasp.md",
+   "Parent image: hackathon/spikes/2026-10-23-v2-grasp/runs-pc2/20261024T035520/order_01/measure_servo0.jpg"
+  ]
+ },
+ {
+  "text": [
+   "The code is a compact illustration of control flow over the shared API, based on tasks/give_leftmost.py, not a literal captured model output. x increases to the robot’s left; this illustration assumes localized candidates.",
+   "12B did write correct programs for eight of nine basic tasks but took 12.20 seconds wall median on the Orin. It was too slow for our desired live interaction pace.",
+   "The team reports some success on AGX Thor. There is no recorded timing or concrete task supplied yet. Replace the yellow placeholder before presenting this slide, using E.",
+   "Generated code can compose existing pick/offer/place capabilities. It cannot create a missing grasp controller just by naming a skill."
+  ],
+  "sources": [
+   "docs/2026-10-22-orin-model-sizes.md; bench/codegen_probe.py; core/robot_api.py; tasks/give_leftmost.py",
+   "AGX Thor experiment: presenter report, October 24, 2026. Task example intentionally left editable at presenter request."
+  ]
+ },
+ {
+  "text": [
+   "Close with specific appreciation: Gemma provides compact native audio/vision, grounded semantic decisions and stronger task composition at larger sizes, all in open local weights. LiteRT adds a second functioning GPU deployment path.",
+   "Our current baseline has no task-specific post-training. Future post-training aims at fewer generated tokens, better ambiguity handling, stronger task programs and lower latency per successful task. These are research goals, not already measured gains.",
+   "Runtime calibration and future weight updates are distinct forms of improvement.",
+   "Invite a live request in a tested language and by a visible picture. Keep the live demo within the verified hardware envelope. A safety operator is not hidden teleoperation; describe any assistance honestly."
+  ],
+  "sources": [
+   "LEARNINGS.md; docs/2026-10-22-litert-gpu.md; docs/2026-10-22-orin-model-sizes.md",
+   "https://github.com/MoissanClub/gemma-hackathon",
+   "Presenter-supplied future-work direction."
+  ]
+ },
+ {
+  "text": [
+   "This appendix combines same-day October 22 model-size results only. All model-size timing uses the unpinned MAXN run. Code generation uses request wall-clock medians cross-checked against saved summaries.",
+   "Raw values before rounding: word 367.7 / 532.4 / 829.3 ms; boxes 838.7 / 1498.8 / 2778.2 ms.",
+   "The larger models were not audio-evaluated in this comparison. Do not infer their speech accuracy from these vision/code figures."
+  ],
+  "sources": [
+   "docs/2026-10-22-orin-model-sizes.md; underlying parent experiments/ summary.json files listed on the corresponding slides."
+  ]
+ }
 ];
 const slides=[...document.querySelectorAll('.slide')],MAIN=12;
 let current=0,editing=false,touchX=null,lastSwipe=0;
+let autoplay=true,autoplayTimer=null,autoplayDeadline=0,autoplayRemaining=20000;
 const $=s=>document.querySelector(s), esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function fit(){document.documentElement.style.setProperty('--scale',Math.min(innerWidth/1920,innerHeight/1080));}addEventListener('resize',fit);fit();
-function closeOverlays(){document.querySelectorAll('.overlay').forEach(x=>x.classList.remove('open'));}
+function autoplayBlocked(){return document.hidden||editing||current>=MAIN||document.querySelector('.overlay.open')||$('#blackout').classList.contains('on');}
+function syncAutoplay(reset=false){
+ if(autoplayTimer!==null){if(!reset)autoplayRemaining=Math.max(0,autoplayDeadline-Date.now());clearTimeout(autoplayTimer);autoplayTimer=null;}
+ if(reset)autoplayRemaining=current===0?20000:15000;
+ const button=$('#autoplay-btn');button.textContent=autoplay?'Pause P':'Play P';button.setAttribute('aria-pressed',String(autoplay));button.title=autoplay?'Pause autoplay (P)':'Resume autoplay (P)';
+ if(!autoplay||autoplayBlocked())return;
+ autoplayDeadline=Date.now()+autoplayRemaining;
+ autoplayTimer=setTimeout(()=>{autoplayTimer=null;show((current+1)%MAIN);},autoplayRemaining);
+}
+function toggleAutoplay(){autoplay=!autoplay;syncAutoplay();}
+function closeOverlays(){document.querySelectorAll('.overlay').forEach(x=>x.classList.remove('open'));syncAutoplay();}
 function show(index,updateHash=true){
  const n=Math.max(0,Math.min(slides.length-1,index));slides.forEach((s,i)=>{s.classList.toggle('active',i===n);s.classList.toggle('previous',i<n);s.setAttribute('aria-hidden',i===n?'false':'true');s.inert=i!==n;});current=n;
  $('#counter').textContent=n<MAIN?`${n+1} / ${MAIN}`:`A${n-MAIN+1} / ${slides.length-MAIN}`;$('#section-label').textContent=slides[n].dataset.section;$('#progress').style.width=((Math.min(n+1,MAIN)/MAIN)*100)+'%';
  document.title=`${n+1}. ${slides[n].dataset.title} — Gemma hackathon`;if(updateHash){try{history.replaceState(null,'','#'+(n+1));}catch(e){}}
- if($('#notes').classList.contains('open'))renderNotes();renderOverview();
+ if($('#notes').classList.contains('open'))renderNotes();renderOverview();syncAutoplay(true);
 }
 function renderNotes(){const n=NOTES[current];$('#notes-title').textContent=slides[current].dataset.title;$('#notes-body').innerHTML=n.text.map(t=>`<p>${esc(t)}</p>`).join('');$('#notes-sources').innerHTML='<strong>Sources and scope</strong><br>'+n.sources.map(esc).join('<br>');}
 function renderOverview(){$('#overview-grid').innerHTML=slides.map((s,i)=>`<button data-slide="${i}" class="${i===current?'current':''}"><span>${i<MAIN?'SLIDE '+(i+1):'APPENDIX '+(i-MAIN+1)}</span>${esc(s.dataset.title)}</button>`).join('');}
-function toggleOverlay(id){const el=$('#'+id),open=!el.classList.contains('open');closeOverlays();if(id==='notes')renderNotes();if(id==='overview')renderOverview();el.classList.toggle('open',open);if(open)el.querySelector('.close').focus();}
+function toggleOverlay(id){const el=$('#'+id),open=!el.classList.contains('open');closeOverlays();if(id==='notes')renderNotes();if(id==='overview')renderOverview();el.classList.toggle('open',open);if(open)el.querySelector('.close').focus();syncAutoplay();}
 function replay(){const s=slides[current];s.classList.remove('active');void s.offsetWidth;s.classList.add('active');}
 function fullscreen(){if(document.fullscreenElement){document.exitFullscreen?.();}else{document.documentElement.requestFullscreen?.().catch(()=>{});}}
 const perception={box:{ms:[839,1499,2778],score:['78 / 78','78 / 78','78 / 78'],copy:'E2B already solves this diagnostic.<br>12B gives tighter boxes, with a longer wait.'},word:{ms:[368,532,829],score:['77 / 78','69 / 78','75 / 78'],copy:'The smallest model is the best fit here.<br>This narrow diagnostic does not rank general capability.'}};
 let perceptionMode='box';function setPerception(mode){perceptionMode=mode;const d=perception[mode],max=Math.max(...d.ms);$('#perception-chart').querySelectorAll('.model-row').forEach((r,i)=>{r.querySelector('.bar-fill').style.setProperty('--width',d.ms[i]/max*100+'%');r.querySelector('.latency').textContent=d.ms[i].toLocaleString('en-US')+' ms';r.querySelector('.score').textContent=d.score[i];});$('#perception-takeaway').innerHTML=d.copy;document.querySelectorAll('[data-perception]').forEach(b=>{b.classList.toggle('selected',b.dataset.perception===mode);b.setAttribute('aria-pressed',b.dataset.perception===mode?'true':'false');});}
 document.querySelectorAll('[data-perception]').forEach(b=>b.addEventListener('click',()=>setPerception(b.dataset.perception)));
-$('#prev').onclick=()=>show(current-1);$('#next').onclick=()=>show(current+1);$('#overview-btn').onclick=()=>toggleOverlay('overview');$('#notes-btn').onclick=()=>toggleOverlay('notes');$('#help-btn').onclick=()=>toggleOverlay('help');$('#fullscreen-btn').onclick=fullscreen;
+$('#prev').onclick=()=>show(current-1);$('#next').onclick=()=>show(current+1);$('#overview-btn').onclick=()=>toggleOverlay('overview');$('#notes-btn').onclick=()=>toggleOverlay('notes');$('#help-btn').onclick=()=>toggleOverlay('help');$('#fullscreen-btn').onclick=fullscreen;$('#autoplay-btn').onclick=toggleAutoplay;document.addEventListener('visibilitychange',()=>syncAutoplay());
 document.querySelectorAll('.overlay .close').forEach(b=>b.onclick=closeOverlays);$('#overview-grid').onclick=e=>{const b=e.target.closest('[data-slide]');if(b){closeOverlays();show(Number(b.dataset.slide));}};
-function edit(){editing=!editing;$('#stage').classList.toggle('editing',editing);document.querySelectorAll('[data-edit]').forEach(e=>e.contentEditable=String(editing));if(editing){show(10);const e=$('[data-edit]');e.focus();const r=document.createRange();r.selectNodeContents(e);const s=getSelection();s.removeAllRanges();s.addRange(r);}else{document.activeElement.blur();}}
+function edit(){editing=!editing;$('#stage').classList.toggle('editing',editing);document.querySelectorAll('[data-edit]').forEach(e=>e.contentEditable=String(editing));if(editing){show(10);const e=$('[data-edit]');e.focus();const r=document.createRange();r.selectNodeContents(e);const s=getSelection();s.removeAllRanges();s.addRange(r);}else{document.activeElement.blur();}syncAutoplay();}
 document.querySelectorAll('[data-edit]').forEach(e=>{try{const v=localStorage.getItem('gemma-deck-'+e.dataset.edit);if(v)e.textContent=v;}catch(err){}e.addEventListener('input',()=>{try{localStorage.setItem('gemma-deck-'+e.dataset.edit,e.textContent);}catch(err){}});});
 addEventListener('keydown',e=>{
  if(e.metaKey||e.ctrlKey||e.altKey)return;if(e.target.isContentEditable){if(e.key==='Escape'){edit();e.preventDefault();}return;}
- if(e.key==='Escape'){closeOverlays();$('#blackout').classList.remove('on');return;}
- const k=e.key.toLowerCase();if(k==='b'||k==='.'){e.preventDefault();$('#blackout').classList.toggle('on');return;}
+ if(e.key==='Escape'){closeOverlays();$('#blackout').classList.remove('on');syncAutoplay();return;}
+ const k=e.key.toLowerCase();if(k==='p'){e.preventDefault();toggleAutoplay();return;}if(k==='b'||k==='.'){e.preventDefault();$('#blackout').classList.toggle('on');syncAutoplay();return;}
  if(document.querySelector('.overlay.open'))return;
  if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();show(current+1);}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();show(current-1);}else if(e.key==='Home'){e.preventDefault();show(0);}else if(e.key==='End'){e.preventDefault();show(MAIN-1);}else if(k==='f'){fullscreen();}else if(k==='o'){toggleOverlay('overview');}else if(k==='n'){toggleOverlay('notes');}else if(k==='?'||k==='h'){toggleOverlay('help');}else if(k==='a'){show(MAIN);}else if(k==='r'){replay();}else if(k==='c'&&current===4){setPerception(perceptionMode==='box'?'word':'box');}else if(k==='e'){edit();}else if(k==='m'){document.body.classList.toggle('reduced');}
 });
