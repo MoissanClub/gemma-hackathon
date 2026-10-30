@@ -41,8 +41,10 @@ class R1(Embodiment):
         try: self.pipe.start(cfg)
         except Exception as e:
             raise RuntimeError("Orbbec busy (%s): stop Stefan's r1-wristcam service first (README)" % e)
-        ci = self.pipe.get_camera_param().rgb_intrinsic
+        prm = self.pipe.get_camera_param(); ci = prm.rgb_intrinsic
         self.K = (ci.fx, ci.fy, ci.cx, ci.cy)
+        tr = prm.transform                                 # depth -> colour: p_colour = R p_depth + t (t in mm)
+        self.d2c = (np.array(tr.rot, float).reshape(3, 3), np.array(tr.transform, float) / 1000.0)
         for _ in range(15): self.pipe.wait_for_frames(1000)   # auto exposure settles
 
     def shutdown(self):
@@ -66,6 +68,12 @@ class R1(Embodiment):
         raise RuntimeError("no frames from the wrist Orbbec")
 
     # --- geometry ---------------------------------------------------------------------------------------------------------
+    def to_depth_frame(self, xyz):
+        """A colour-camera point (what locate returns: depth aligned to colour) in the depth camera's frame, the frame Stefan's
+        hand-eye (camera_extrinsics.yaml) was fitted in."""
+        R, t = self.d2c
+        return R.T @ (self.np.asarray(xyz, float) - t)
+
     def rect(self, shape, x1, y1, x2, y2):
         """A boolean pixel mask of a rectangle, clipped to the image."""
         m = self.np.zeros(shape, bool); H, W = shape

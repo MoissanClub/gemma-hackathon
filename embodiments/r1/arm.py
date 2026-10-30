@@ -1,0 +1,162 @@
+"""R1's SO-101 straight on its Feetech bus, for Stefan's pick sequence (seraphos.arm.pick_seq.Picker), with Gemma as its eyes.
+
+Stefan's seraphos tree is used read-only from a path (`load_seraphos`): his driver (FeetechStsDriver: present pose -> goal before
+torque on), kinematics, hand-eye and pick sequence, and his calibration files (zero_raw, q_lim, rest pose, camera extrinsics). Nothing
+of his is copied into this repo. What is ours:
+
+  R1Arm          his ArmClient protocol on the bus directly (his r1-mux must be stopped: it owns the port). Servo ids 1-6 only; the
+                 wheels (7-9) are never addressed. Every target is CLAMPED to q_lim before it is sent (his command rule), speed capped.
+  GemmaPerception  his Perception protocol: Gemma boxes the object in a fresh wrist frame, the Orbbec depth locates it (adapter.R1),
+                 his FK and hand-eye map it to the arm base frame. The jaw height is kinematic (TCP height against the measured jaw-tip
+                 floor contact, arm_profile.yaml), so the descent stops at his floor protection, not on a depth guess.
+"""
+import math, os, sys, time, types
+
+JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
+
+
+def load_seraphos(root):
+    """Put Stefan's seraphos checkout (read-only copy) on the path. seraphos.sensor.floor_objects is not in the copy: pick.py uses it
+    only in detect_in_base (never called here) and in annotations (never evaluated), so an empty module stands in for it."""
+    root = os.path.expanduser(root)
+    if not os.path.isdir(os.path.join(root, "seraphos", "arm")): raise SystemExit("no seraphos/arm under %s" % root)
+    sys.path.insert(0, root)
+    if "seraphos.sensor.floor_objects" not in sys.modules:
+        import seraphos
+        sensor = types.ModuleType("seraphos.sensor"); fo = types.ModuleType("seraphos.sensor.floor_objects")
+        sensor.floor_objects = fo; sys.modules["seraphos.sensor"] = sensor; sys.modules["seraphos.sensor.floor_objects"] = fo
+    return root
+
+
+class SerialPort:
+    """The two-method transport his driver wants, on pyserial, opened exclusively."""
+    def __init__(self, path, baud=1000000):
+        import serial
+        self.s = serial.Serial(path, baud, timeout=0, exclusive=True)
+
+    def write(self, data): self.s.write(data)
+
+    def read(self, n, timeout):
+        end, out = time.monotonic() + timeout, b""
+        while len(out) < n:
+            out += self.s.read(n - len(out))
+            if out or time.monotonic() >= end: break
+            time.sleep(0.0005)
+        return out
+
+    def close(self): self.s.close()
+
+
+def robot_files(root):
+    """(calibration, profile, extrinsics) paths: his ~/.seraphos calibration where the copy has it, else the deploy file."""
+    d = os.path.join(root, "deploy", "robots", "r1")
+    return os.path.join(d, "arm_calibration.yaml"), os.path.join(d, "arm_profile.yaml"), os.path.join(d, "camera_extrinsics.yaml")
+
+
+class R1Arm:
+    """seraphos.arm.pick.ArmClient on the bus. q in radians, JOINTS order."""
+    def __init__(self, root, port="/dev/serial/by-id/usb-1a86_USB_Single_Serial_5AE6057345-if00", speed_rad_s=0.8, acc_rad_s2=8.0,
+                 calibration=None):
+        import json, yaml
+        from seraphos.arm.drivers import JointSpec
+        from seraphos.arm.drivers.feetech_sts import FeetechStsDriver
+        cal_path = calibration or robot_files(root)[0]
+        cal = yaml.safe_load(open(cal_path))["joints"]
+        model = {j["name"]: j for j in json.load(open(os.path.join(root, "seraphos/arm/models/so101/model.json")))["joints"]}
+        self.specs = [JointSpec(n, model[n]["motor"], model[n]["bus_id"], None, model[n].get("direction", 1), cal[n]["zero_raw"]) for n in JOINTS]
+        assert [s.bus_id for s in self.specs] == [1, 2, 3, 4, 5, 6], "arm ids must be 1-6 (7-9 are the wheels)"
+        self.limits = [list(map(float, cal[n]["q_lim"])) for n in JOINTS]
+        rpc = 2 * math.pi / 4096
+        self.rest_q = [s.direction * (cal[n]["rest_pose_raw"] - s.zero_raw) * rpc for s, n in zip(self.specs, JOINTS)]
+        self.cal_path, self.speed, self.acc = cal_path, speed_rad_s, acc_rad_s2
+        self.port = SerialPort(port)
+        self.drv = FeetechStsDriver(self.port, self.specs, default_speed=int(round(speed_rad_s / rpc)), default_acc=max(1, int(round(acc_rad_s2 / rpc / 100))))
+        self.powered, self.goal, self.clamps = False, None, []
+
+    def clamp(self, q):
+        out = []
+        for i, (v, (lo, hi)) in enumerate(zip(q, self.limits)):
+            c = min(hi, max(lo, v))
+            if abs(c - v) > 1e-6: self.clamps.append((JOINTS[i], v, c))
+            out.append(c)
+        return out
+
+    def state(self):
+        from seraphos.arm.pick import ArmState
+        st = self.drv.read(poll=True)
+        stale = [JOINTS[i] for i, s in enumerate(st) if not s.fresh]
+        fault = ("no answer from " + ", ".join(stale)) if stale else next(("%s fault %s" % (JOINTS[i], self.drv.decode_fault(s.fault))
+                                                                          for i, s in enumerate(st) if s.fault), None)
+        return ArmState([s.position for s in st], [s.load or 0.0 for s in st], None, self.powered, fault,
+                        any(abs(s.velocity) > 0.02 for s in st))
+
+    def command(self, q):
+        from seraphos.arm.drivers import JointCommand
+        if not self.powered: raise RuntimeError("command with torque off")
+        base = self.goal or self.state().q
+        self.goal = self.clamp([b if v is None else float(v) for b, v in zip(base, q)])
+        self.drv.send([JointCommand(position=v, velocity=self.speed) for v in self.goal])
+
+    def wait(self, seconds): time.sleep(max(0.0, seconds))
+
+    def enable(self, on):
+        if on:
+            st = self.drv.enable(); self.powered = True; self.goal = [s.position for s in st]
+            return "torque on, holding %s" % [round(math.degrees(v)) for v in self.goal]
+        self.drv.disable(); self.powered = False; self.goal = None
+        return "torque off"
+
+    def close(self):
+        try:
+            if self.powered: self.drv.disable()             # a dry run never wrote to a servo and does not start now
+        finally: self.port.close()
+
+
+class GemmaPerception:
+    """seraphos.arm.pick_seq.Perception from Gemma boxes + Orbbec depth. `target` is the current estimate of the object in the arm base
+    frame; a box is accepted only within `gate_m` of it (a box on the jaws or on another object is ignored)."""
+    def __init__(self, cam, gem, arm, ext, what, target, tip_contact_z, gate_m=0.08, log=print):
+        self.cam, self.gem, self.arm, self.ext, self.what, self.log = cam, gem, arm, ext, what, log
+        self.target, self.tip_contact_z, self.gate = list(target), tip_contact_z, gate_m
+        self.seen = []                                           # (time, q, box, xyz_base) of every accepted look
+
+    def look(self):
+        """Fresh frame at the arm's present pose -> [(box, xyz_base)] for every Gemma box that depth can locate."""
+        import numpy as np
+        from core.embodiment import Refused
+        from seraphos.arm.handeye import camera_to_base
+        from seraphos.arm.so101_kinematics import fk
+        q = self.arm.state().q[:5]; f = self.cam.frame(); tcp = fk(q)
+        boxes, _ = self.gem.boxes(f.image, what=self.what)
+        out = []
+        for b in boxes:
+            try: tg = self.cam.locate(f, b, self.what)
+            except Refused as e: self.log("  box %s refused: %s" % ([round(v) for v in b], e)); continue
+            p = camera_to_base(tcp, np.array(self.cam.to_depth_frame(tg.xyz)), self.ext)
+            out.append((b, [float(v) for v in p], tg))
+        return q, f, out
+
+    def object_base(self):
+        q, f, found = self.look()
+        near = [(math.hypot(p[0] - self.target[0], p[1] - self.target[1]), b, p) for b, p, _ in found]
+        near = [n for n in near if n[0] <= self.gate]
+        self.log("  look: %d box(es), %s" % (len(found), ["(%.3f, %.3f, %.3f)" % tuple(p) for _, p, _ in found]))
+        if not near: return None
+        _, b, p = min(near)
+        self.target = p[:2]; self.seen.append((time.time(), q, b, p)); return p
+
+    # --- seraphos.arm.pick_seq.Perception
+    def object_minus_tip(self):
+        from seraphos.arm.pick_seq import Offset
+        from seraphos.arm.so101_kinematics import fk
+        p = self.object_base()
+        if p is None: return None
+        tcp = fk(self.arm.state().q[:5])[:3, 3]
+        return Offset(p[0] - float(tcp[0]), p[1] - float(tcp[1]))
+
+    def jaw_height_above_floor(self):
+        from seraphos.arm.so101_kinematics import fk
+        return float(fk(self.arm.state().q[:5])[2, 3]) - self.tip_contact_z
+
+    def object_present(self):
+        return self.object_base() is not None
