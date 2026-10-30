@@ -68,10 +68,20 @@ try:
     log("TARGET %s in the arm base frame: x %.3f y %.3f z %.3f m (floor z %.3f; +-1.5 cm per his hand-eye)" % (a.what, p[0], p[1], p[2], -ext.floor_below_base_m), target=p)
     cfg = PickConfig(arm.limits[:4], ext, arm.rest_q[:5], approach_stop_m=0.020)
     pk = Picker(arm, perc, cfg)
-    for _ in range(3):                                         # aim the TCP so that the grasp centre, not the fixed jaw, is over the object
-        q_h = pk._hover_q(p[0], p[1]); T = fk(q_h); dgc = perc.grasp_centre(T) - T[:3, 3]
-        p = [perc.target[0] - float(dgc[0]), perc.target[1] - float(dgc[1]), p[2]]
-    q_h = pk._hover_q(p[0], p[1])
+    obj, aim = list(perc.target), list(perc.target)
+    for _ in range(4):                                         # aim the TCP so that the grasp centre, not the fixed jaw, is over the object
+        probe, q_h = list(aim), None                           # the offset at a reachable pose near the aim (it barely changes with the pose)
+        for _k in range(12):
+            try: q_h = pk._hover_q(probe[0], probe[1]); break
+            except RuntimeError: probe = [probe[0] * 0.97, probe[1] * 0.97]
+        if q_h is None: raise SystemExit("no reachable hover near (%.3f, %.3f)" % tuple(aim))
+        T = fk(q_h); dgc = perc.grasp_centre(T) - T[:3, 3]
+        aim = [obj[0] - float(dgc[0]), obj[1] - float(dgc[1])]
+    log("grasp centre minus TCP in the base frame (%.3f, %.3f) m: TCP aim x %.3f y %.3f for the object at (%.3f, %.3f)" % (dgc[0], dgc[1], aim[0], aim[1], obj[0], obj[1]))
+    p = [aim[0], aim[1], p[2]]
+    try: q_h = pk._hover_q(p[0], p[1])
+    except RuntimeError as e:
+        raise SystemExit("%s: move the object about %.0f cm closer to the robot" % (e, max(1, 100 * (math.hypot(*aim) - 0.355))))
     log("TCP aim x %.3f y %.3f so the grasp centre is over the object (%.3f, %.3f)" % (p[0], p[1], perc.target[0], perc.target[1]))
     log("hover/servo pose (deg) %s, TCP %s" % (deg(q_h), np.round(fk(q_h)[:3, 3], 3).tolist()), q_hover=q_h)
     log("path rest->hover clear: %s; now->hover clear: %s" % (path_clear(arm.rest_q[:5], q_h, ext, tcp_min_m=0.03), path_clear(s.q[:5], q_h, ext, tcp_min_m=0.03)))
