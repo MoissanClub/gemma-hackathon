@@ -54,7 +54,11 @@ def settle_at_rest(arm, pk, log, tol_deg=8.0):
         if not at_rest(): pk._rest()
     except Exception as e: log("rest failed: %s" % e)
     s = arm.state(); log("end pose (deg) %s; clamps %s; gripper fault %s" % (deg(s.q), arm.clamps, arm.gripper_fault))
-    if at_rest(): log("at rest; disable: " + arm.enable(False))
+    if s.fault and s.fault.startswith("no answer"):
+        arm.hold = True
+        log("SERVOS SILENT (%s): no power or no bus. The pose above is the last one read; an unpowered arm has dropped. "
+            "Check the servo power supply before anything else." % s.fault)
+    elif at_rest(): log("at rest; disable: " + arm.enable(False))
     else:
         arm.hold = True
         log("HOLDING: the arm is NOT at rest, its torque stays ON where it is. Support it, then switch the servo power off "

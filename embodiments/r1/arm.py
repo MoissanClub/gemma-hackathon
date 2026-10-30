@@ -72,6 +72,7 @@ class R1Arm:
         self.port = SerialPort(port)
         self.drv = FeetechStsDriver(self.port, self.specs, default_speed=int(round(speed_rad_s / rpc)), default_acc=max(1, int(round(acc_rad_s2 / rpc / 100))))
         self.powered, self.goal, self.clamps, self.hold, self.gripper_fault = False, None, [], False, None
+        self.grip_limit = 400                                    # per mille of the STS3215's rated torque; see enable()
 
     def clamp(self, q):
         out = []
@@ -103,8 +104,12 @@ class R1Arm:
 
     def enable(self, on):
         if on:
+            from seraphos.arm.drivers.feetech_sts import protocol as P
+            # the gripper's torque limit (RAM, 0-1000 per mille): squeezing a ball at full stall load cut the servo power on
+            # 2026-10-29 (every servo silent, the arm dropped). Written before torque on, every time (a power cycle restores 1000).
+            self.port.write(P.sync_write(48, {6: bytes([self.grip_limit & 0xFF, self.grip_limit >> 8])})); time.sleep(0.01)
             st = self.drv.enable(); self.powered = True; self.goal = [s.position for s in st]
-            return "torque on, holding %s" % [round(math.degrees(v)) for v in self.goal]
+            return "torque on (gripper torque limit %d per mille), holding %s" % (self.grip_limit, [round(math.degrees(v)) for v in self.goal])
         self.drv.disable(); self.powered = False; self.goal = None
         return "torque off"
 
