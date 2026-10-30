@@ -2,7 +2,7 @@
 Robot-specific programs, calibration, scripts and notes live beside the adapter in the same folder (see embodiments/g1/)."""
 import importlib
 
-KNOWN = ("mock", "g1", "agilex")
+KNOWN = ("mock", "g1", "agilex", "r1")
 
 
 def load(name, **options):
