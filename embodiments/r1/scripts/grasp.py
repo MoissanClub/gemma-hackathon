@@ -58,14 +58,21 @@ try:
     if s.fault: raise SystemExit("arm: " + s.fault)
     log("arm now (deg) %s, rest (deg) %s, torque %s" % (deg(s.q), deg(arm.rest_q), "on" if s.powered else "off"), q=s.q)
     # the target from where the arm is now (it must be still: limp at rest, or held)
-    perc = A.GemmaPerception(cam, gem, arm, ext, a.what, [0.3, 0.0], tip_contact_z, gate_m=10.0, log=log, save_dir=out)
+    go = json.load(open(os.path.join(ROOT, "embodiments/r1/grasp-offset.json")))
+    log("grasp centre in the TCP frame %s m (grasp-offset.json: %s)" % (go["grasp_centre_tcp_m"], go["provenance"][:60]))
+    perc = A.GemmaPerception(cam, gem, arm, ext, a.what, [0.3, 0.0], tip_contact_z, gate_m=10.0, log=log, save_dir=out,
+                             grasp_offset=go["grasp_centre_tcp_m"])
     p = perc.object_base()
     if p is None: raise SystemExit("Gemma + depth found no '%s' from this pose" % a.what)
     perc.gate = 0.08
     log("TARGET %s in the arm base frame: x %.3f y %.3f z %.3f m (floor z %.3f; +-1.5 cm per his hand-eye)" % (a.what, p[0], p[1], p[2], -ext.floor_below_base_m), target=p)
     cfg = PickConfig(arm.limits[:4], ext, arm.rest_q[:5], approach_stop_m=0.020)
     pk = Picker(arm, perc, cfg)
+    for _ in range(3):                                         # aim the TCP so that the grasp centre, not the fixed jaw, is over the object
+        q_h = pk._hover_q(p[0], p[1]); T = fk(q_h); dgc = perc.grasp_centre(T) - T[:3, 3]
+        p = [perc.target[0] - float(dgc[0]), perc.target[1] - float(dgc[1]), p[2]]
     q_h = pk._hover_q(p[0], p[1])
+    log("TCP aim x %.3f y %.3f so the grasp centre is over the object (%.3f, %.3f)" % (p[0], p[1], perc.target[0], perc.target[1]))
     log("hover/servo pose (deg) %s, TCP %s" % (deg(q_h), np.round(fk(q_h)[:3, 3], 3).tolist()), q_hover=q_h)
     log("path rest->hover clear: %s; now->hover clear: %s" % (path_clear(arm.rest_q[:5], q_h, ext, tcp_min_m=0.03), path_clear(s.q[:5], q_h, ext, tcp_min_m=0.03)))
     z0 = -ext.floor_below_base_m + cfg.servo_m; z1 = tip_contact_z + cfg.approach_stop_m
@@ -101,12 +108,12 @@ try:
                 if d is None or math.hypot(d.dx, d.dy) < cfg.servo_tol_m: break
                 x, y = x + d.dx, y + d.dy; q_h = pk._hover_q(x, y); pk._go(q_h, cfg.gripper_open_rad); arm.wait(0.5)
             log("descent ended: %s" % pk._descend(x, y, q_h))
-            tcp = fk(arm.state().q[:5])[:3, 3]
-            log("at the bottom: TCP %s (aimed x %.3f y %.3f)" % (np.round(tcp, 3).tolist(), x, y), tcp=tcp, aim=[x, y])
+            T = fk(arm.state().q[:5]); gc = perc.grasp_centre(T)
+            log("at the bottom: TCP %s, grasp centre %s (TCP aimed x %.3f y %.3f)" % (np.round(T[:3, 3], 3).tolist(), np.round(gc, 3).tolist(), x, y))
             for i in range(2):
                 q_b, f_b, found = perc.look()
-                log("bottom look %d: %s" % (i, ["(%.3f, %.3f, %.3f) minus TCP (%.1f, %.1f) cm" % (pp[0], pp[1], pp[2], (pp[0] - tcp[0]) * 100,
-                                                (pp[1] - tcp[1]) * 100) for _, pp, _ in found]))
+                log("bottom look %d: %s" % (i, ["(%.3f, %.3f, %.3f) minus grasp centre (%.1f, %.1f) cm" % (pp[0], pp[1], pp[2], (pp[0] - gc[0]) * 100,
+                                                (pp[1] - gc[1]) * 100) for _, pp, _ in found]))
             pk._go(pk._hover_q(x, y), cfg.gripper_open_rad); pk._rest()
         else:
             rep = pk.run(p[0], p[1])

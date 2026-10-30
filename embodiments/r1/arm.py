@@ -115,8 +115,9 @@ class R1Arm:
 class GemmaPerception:
     """seraphos.arm.pick_seq.Perception from Gemma boxes + Orbbec depth. `target` is the current estimate of the object in the arm base
     frame; a box is accepted only within `gate_m` of it (a box on the jaws or on another object is ignored)."""
-    def __init__(self, cam, gem, arm, ext, what, target, tip_contact_z, gate_m=0.08, log=print, save_dir=None):
+    def __init__(self, cam, gem, arm, ext, what, target, tip_contact_z, gate_m=0.08, log=print, save_dir=None, grasp_offset=(0.0, 0.0, 0.0)):
         self.cam, self.gem, self.arm, self.ext, self.what, self.log = cam, gem, arm, ext, what, log
+        self.grasp_offset = list(grasp_offset)               # the middle of the open jaws in the TCP frame (grasp-offset.json): the TCP is the fixed jaw tip
         self.target, self.tip_contact_z, self.gate, self.save_dir = list(target), tip_contact_z, gate_m, save_dir
         self.seen, self.n = [], 0                                # (time, q, box, xyz_base) of every accepted look
 
@@ -131,11 +132,13 @@ class GemmaPerception:
         for b, p, _ in found:
             cv2.rectangle(img, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
             cv2.putText(img, "%.3f %.3f %.3f" % tuple(p), (int(b[0]), max(14, int(b[1]) - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
-        c = base_to_camera(tcp, tcp[:3, 3], self.ext); fx, fy, cx, cy = f.meta["K"]
-        if c[2] > 0.01:
-            u, v = int(round(fx * c[0] / c[2] + cx)), int(round(fy * c[1] / c[2] + cy))
-            cv2.drawMarker(img, (u, v), (0, 0, 255), cv2.MARKER_CROSS, 24, 2)
-            cv2.putText(img, "TCP (kinematic)", (u + 8, v - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1)
+        fx, fy, cx, cy = f.meta["K"]
+        for pt, name, col in ((tcp[:3, 3], "TCP (fixed jaw)", (0, 0, 255)), (self.grasp_centre(tcp), "grasp centre", (255, 0, 255))):
+            c = base_to_camera(tcp, pt, self.ext)
+            if c[2] > 0.01:
+                u, v = int(round(fx * c[0] / c[2] + cx)), int(round(fy * c[1] / c[2] + cy))
+                cv2.drawMarker(img, (u, v), col, cv2.MARKER_CROSS, 24, 2)
+                cv2.putText(img, name, (u + 8, v - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, col, 1)
         cv2.imwrite(os.path.join(self.save_dir, "look%02d%s.jpg" % (self.n, label)), img)
         np.save(os.path.join(self.save_dir, "look%02d%s_depth.npy" % (self.n, label)), f.depth.astype(np.float16))
         self.n += 1
@@ -172,8 +175,12 @@ class GemmaPerception:
         from seraphos.arm.so101_kinematics import fk
         p = self.object_base()
         if p is None: return None
-        tcp = fk(self.arm.state().q[:5])[:3, 3]
-        return Offset(p[0] - float(tcp[0]), p[1] - float(tcp[1]))
+        c = self.grasp_centre(fk(self.arm.state().q[:5]))
+        return Offset(p[0] - float(c[0]), p[1] - float(c[1]))
+
+    def grasp_centre(self, tcp):
+        import numpy as np
+        return (tcp @ np.append(np.asarray(self.grasp_offset, float), 1.0))[:3]
 
     def jaw_height_above_floor(self):
         from seraphos.arm.so101_kinematics import fk

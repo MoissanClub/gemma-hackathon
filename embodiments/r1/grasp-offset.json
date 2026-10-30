@@ -1,0 +1,6 @@
+{
+  "grasp_centre_tcp_m": [-0.040, 0.012, -0.007],
+  "gripper_open_deg": 60,
+  "provenance": "2026-10-29, R1 at rest, gripper open 60 deg (the pick's open command): wrist Orbbec depth of one frame (runs/20261029T201910-r1-grasp/look00_depth.npy), median depth in 13x13 px at each open jaw tip mapped into the TCP frame with Stefan's camera_extrinsics.yaml. Fixed (right) jaw tip at (-0.5, 0.3, 0.0) cm: the TCP of so101_kinematics is the fixed jaw tip, to 6 mm. Moving (left) jaw tip at (-7.9, 2.1, -1.4) cm. The grasp centre is their midpoint. One frame, hand-picked pixels: +-1 cm.",
+  "note": "Stefan's live_pick.py measures the same thing (measure_grasp_offset, from jaw_open/jaw_closed captures that are not in git)."
+}
