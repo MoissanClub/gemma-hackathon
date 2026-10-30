@@ -98,9 +98,11 @@ class R1(Embodiment):
         s = np.sqrt(1 + coef[0] ** 2 + coef[1] ** 2)
         n = np.array([-coef[0], 1.0, -coef[1]]) / s                    # unit normal, pointing down (into the floor)
         height = (np.c_[inner[:, 0], inner[:, 2], np.ones(len(inner))] @ coef - inner[:, 1]) / s   # above the plane, metres
-        obj = inner[height > self.min_height]
-        if len(obj) >= 30:
-            xyz, top, flat = np.median(obj, 0), float(np.percentile(height[height > self.min_height], 95)), False
+        r = (ring[:, 1] - A @ coef) / s
+        noise = 1.4826 * float(np.median(np.abs(r - np.median(r))))    # the floor's depth noise around the box (robust sigma)
+        cut = max(self.min_height, 3 * noise); up = height > cut; obj = inner[up]
+        if len(obj) >= max(30, 0.05 * len(inner)):                     # bare floor: a few noisy points pass, never 5% of the box
+            xyz, top, flat = np.median(obj, 0), float(np.percentile(height[up], 95)), False
         else:
             xyz, top, flat = np.median(inner, 0), 0.0, True
         span = obj if not flat else inner
@@ -108,6 +110,7 @@ class R1(Embodiment):
         return Target([round(float(v), 4) for v in xyz], box=box, desc=desc,
                       data={"frame": "wrist camera optical (x right, y down, z forward)", "height_m": round(top, 4),
                             "width_m": round(width, 4), "flat": flat, "points": int(len(span)), "depth_valid": round(float(valid), 2),
+                            "cut_m": round(cut, 4),
                             "floor_normal": [round(float(v), 3) for v in n]})
 
     # --- skills (not yet: perception only) --------------------------------------------------------------------------------
