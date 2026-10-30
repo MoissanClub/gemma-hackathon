@@ -58,5 +58,12 @@ ssh -t rosie@r1 'cd ~/r1-gemma/harness && ../.venv/bin/python -B run.py -e r1 --
 - `locate` on one saved frame, hand-drawn boxes: a crumpled tissue at z 0.337 m, 3.7 cm tall, 3.7 cm wide; the same with a box
   20 px looser (1.2 mm apart); three bare-floor boxes at 0.31, 0.38 and 0.55 m all `flat`. The cut is 2.2 cm at 0.35 m (floor depth
   noise sigma ~7 mm): lower objects come back `flat`. n = 1 frame: not a measurement of accuracy.
-- Next: Gemma boxes on live frames; joint state at capture and a hand-eye calibration (base-frame targets); then the arm,
+- Live, `look.py "the white tissue" --n 3` (Gemma 4 E2B on R1's Orin Nano, llama.cpp 3c809f4, CUDA sm_87): a box on the tissue in
+  3/3 fresh frames, 2271 ms for the first call then 1049 and 1041 ms; located at z 0.336-0.340 m, x 3.7-3.8 cm right, 3.9-4.1 cm
+  tall. n = 3 frames of one scene. R1 memory with the server up: 6.3 of 7.4 GB used.
+- Arm (read only so far): `/dev/ttyACM0` at 1 Mbaud, STS3215 ids 1-6 (pan, lift, elbow, wrist flex, wrist roll, gripper) and 7-9
+  (wheels); servo EEPROM uncalibrated (homing offset 0, limits 0-4095): Stefan's calibration (`~/.seraphos/calibration/
+  so101_r1_main.yaml`, his hand sweep 2026-10-19) holds the zero, the joint limits and the rest pose, and his
+  `seraphos/arm/so101_kinematics.py` the FK/IK. The bus is free only while his `r1-mux` is stopped.
+- Next: base-frame targets (his hand-eye calibration); joint state at capture and a hand-eye calibration (base-frame targets); then the arm,
   through Stefan's interface and with him present.
