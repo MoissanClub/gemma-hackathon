@@ -24,6 +24,8 @@ ap.add_argument("--ob-config", default="~/r1-gemma/ob-config.xml")
 ap.add_argument("--server", default="http://127.0.0.1:8080/v1")
 ap.add_argument("--speed", type=float, default=0.8, help="joint speed cap, rad/s (his ceiling 1.5)")
 ap.add_argument("--yes", action="store_true", help="do not ask before the first motion")
+ap.add_argument("--look", default=None, metavar="X,Y", help="find the object from the hover pose over (X, Y) m in the arm base frame (MOVES), "
+                "not from where the arm is: rest sees only the floor past ~30 cm, the arm reaches ~36 cm")
 a = ap.parse_args()
 
 from embodiments.r1 import arm as A
@@ -62,12 +64,32 @@ try:
     log("grasp centre in the TCP frame %s m (grasp-offset.json: %s)" % (go["grasp_centre_tcp_m"], go["provenance"][:60]))
     perc = A.GemmaPerception(cam, gem, arm, ext, a.what, [0.3, 0.0], tip_contact_z, gate_m=10.0, log=log, save_dir=out,
                              grasp_offset=go["grasp_centre_tcp_m"])
-    p = perc.object_base()
-    if p is None: raise SystemExit("Gemma + depth found no '%s' from this pose" % a.what)
-    perc.gate = 0.08
-    log("TARGET %s in the arm base frame: x %.3f y %.3f z %.3f m (floor z %.3f; +-1.5 cm per his hand-eye)" % (a.what, p[0], p[1], p[2], -ext.floor_below_base_m), target=p)
     cfg = PickConfig(arm.limits[:4], ext, arm.rest_q[:5], approach_stop_m=0.020)
     pk = Picker(arm, perc, cfg)
+    if a.look:                                                 # look from above the reachable floor, not from rest (rest sees only past ~30 cm)
+        lx, ly = map(float, a.look.split(","))
+        q_look = pk._hover_q(lx, ly)
+        log("LOOK POSE over (%.2f, %.2f) (deg) %s, TCP %s, path rest->look clear: %s" % (lx, ly, deg(q_look), np.round(fk(q_look)[:3, 3], 3).tolist(),
+            path_clear(s.q[:5], q_look, ext, tcp_min_m=0.03)))
+        if a.mode == "dry": log("DRY: the look needs the arm to move; nothing was sent"); raise SystemExit(0)
+        log("MOTION: torque on where it is, staged move to the look pose, gripper open; if nothing is seen: back to rest, torque off")
+        if not a.yes and input("  owner at the robot, power switch in reach? type 'go' to move: ").strip().lower() != "go":
+            raise SystemExit("not moving")
+        log("enable: " + arm.enable(True))
+        try:
+            pk._staged(arm.state().q[:5], q_look, gripper=cfg.gripper_open_rad); pk._gripper_stopped(); arm.wait(0.5)
+            p = perc.object_base() or perc.object_base()
+        except BaseException as e:
+            log("abort at the look pose: %s: %s" % (type(e).__name__, e)); p = None
+            if not isinstance(e, Exception): pk._rest(); log("disable: " + arm.enable(False)); raise
+        if p is None:
+            pk._rest(); log("disable: " + arm.enable(False))
+            raise SystemExit("Gemma + depth found no '%s' from the look pose" % a.what)
+    else:
+        p = perc.object_base()
+        if p is None: raise SystemExit("Gemma + depth found no '%s' from this pose" % a.what)
+    perc.gate = 0.08
+    log("TARGET %s in the arm base frame: x %.3f y %.3f z %.3f m (floor z %.3f; +-1.5 cm per his hand-eye)" % (a.what, p[0], p[1], p[2], -ext.floor_below_base_m), target=p)
     obj, aim = list(perc.target), list(perc.target)
     for _ in range(4):                                         # aim the TCP so that the grasp centre, not the fixed jaw, is over the object
         probe, q_h = list(aim), None                           # the offset at a reachable pose near the aim (it barely changes with the pose)
@@ -81,6 +103,7 @@ try:
     p = [aim[0], aim[1], p[2]]
     try: q_h = pk._hover_q(p[0], p[1])
     except RuntimeError as e:
+        if arm.powered: pk._rest(); log("disable: " + arm.enable(False))
         raise SystemExit("%s: move the object about %.0f cm closer to the robot" % (e, max(1, 100 * (math.hypot(*aim) - 0.355))))
     log("TCP aim x %.3f y %.3f so the grasp centre is over the object (%.3f, %.3f)" % (p[0], p[1], perc.target[0], perc.target[1]))
     log("hover/servo pose (deg) %s, TCP %s" % (deg(q_h), np.round(fk(q_h)[:3, 3], 3).tolist()), q_hover=q_h)
@@ -99,9 +122,10 @@ try:
             "pick": "torque on where it is, staged move over the %s, empty close and open, up to 3 servo corrections, descend in steps to the "
                     "floor protection or contact, close, judge, lift 10 cm, judge again, back to rest, torque off"}[a.mode] % a.what
     log("MOTION PLAN (%s, speed cap %.1f rad/s): %s" % (a.mode, a.speed, plan))
-    if not a.yes and input("  owner at the robot, power switch in reach? type 'go' to move: ").strip().lower() != "go":
-        raise SystemExit("not moving")
-    log("enable: " + arm.enable(True))
+    if not arm.powered:
+        if not a.yes and input("  owner at the robot, power switch in reach? type 'go' to move: ").strip().lower() != "go":
+            raise SystemExit("not moving")
+        log("enable: " + arm.enable(True))
     try:
         if a.mode == "hover":
             pk._staged(arm.state().q[:5], q_h, gripper=cfg.gripper_open_rad)
@@ -139,5 +163,8 @@ try:
         log("end pose (deg) %s; clamps %s" % (deg(s.q), arm.clamps))
         log("disable: " + arm.enable(False))
 finally:
+    if arm.powered:                                            # an error between two motions: rest first, a released arm up high would drop
+        try: pk._rest(); log("rested after an error; disable: " + arm.enable(False))
+        except Exception as e: log("rest failed: %s" % e)
     arm.close(); cam.shutdown(); logf.close()
     print("log", out)
