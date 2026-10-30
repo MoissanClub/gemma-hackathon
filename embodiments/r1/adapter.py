@@ -31,7 +31,8 @@ class R1(Embodiment):
         if not self.ob_config or not os.path.exists(self.ob_config):
             raise RuntimeError("--opt ob_config=<path>: the Orbbec config with LinuxUVCBackend V4L2 and auto-reboot off (README)")
         self.np, self.ob = np, ob
-        dev = ob.Context(self.ob_config).query_devices().get_device_by_index(0); info = dev.get_device_info()
+        self.ctx = ob.Context(self.ob_config)              # kept: a freed context frees the device manager ("NULL pointer deviceMgr")
+        dev = self.ctx.query_devices().get_device_by_index(0); info = dev.get_device_info()
         self.dev_info = "%s %s fw %s" % (info.get_name(), info.get_serial_number(), info.get_firmware_version())
         self.pipe, cfg = ob.Pipeline(dev), ob.Config()
         for st in (ob.OBSensorType.COLOR_SENSOR, ob.OBSensorType.DEPTH_SENSOR):
