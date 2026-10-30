@@ -45,7 +45,7 @@ ssh -t rosie@r1 'sudo -u stefan XDG_RUNTIME_DIR=/run/user/2002 systemctl --user 
 Deploy a committed tree, serve Gemma (`scripts/serve-r1.sh`, port 8080; `serve-r1.sh stop`), probe:
 
 ```bash
-git archive --format=tar HEAD | ssh rosie@r1 'rm -rf ~/r1-gemma/harness && mkdir -p ~/r1-gemma/harness && tar -x -C ~/r1-gemma/harness'
+git archive --format=tar HEAD | ssh rosie@r1 'mkdir -p ~/r1-gemma/harness && find ~/r1-gemma/harness -mindepth 1 -maxdepth 1 ! -name runs -exec rm -rf {} + && tar -x -C ~/r1-gemma/harness'   # keeps runs/
 ssh rosie@r1 'cd ~/r1-gemma/harness && ../.venv/bin/python -B check.py'
 ssh rosie@r1 '~/r1-gemma/harness/embodiments/r1/scripts/serve-r1.sh'
 ssh rosie@r1 'cd ~/r1-gemma/harness && ../.venv/bin/python -B embodiments/r1/scripts/look.py --ob-config ~/r1-gemma/ob-config.xml "the crumpled paper"'
