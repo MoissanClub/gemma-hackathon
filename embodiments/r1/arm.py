@@ -71,7 +71,7 @@ class R1Arm:
         self.cal_path, self.speed, self.acc = cal_path, speed_rad_s, acc_rad_s2
         self.port = SerialPort(port)
         self.drv = FeetechStsDriver(self.port, self.specs, default_speed=int(round(speed_rad_s / rpc)), default_acc=max(1, int(round(acc_rad_s2 / rpc / 100))))
-        self.powered, self.goal, self.clamps = False, None, []
+        self.powered, self.goal, self.clamps, self.hold, self.gripper_fault = False, None, [], False, None
 
     def clamp(self, q):
         out = []
@@ -85,8 +85,10 @@ class R1Arm:
         from seraphos.arm.pick import ArmState
         st = self.drv.read(poll=True)
         stale = [JOINTS[i] for i, s in enumerate(st) if not s.fresh]
+        # the gripper's own fault (an overload from squeezing) is logged, not a stop: it must not keep the arm from going to rest
+        if st[5].fault: self.gripper_fault = self.drv.decode_fault(st[5].fault)
         fault = ("no answer from " + ", ".join(stale)) if stale else next(("%s fault %s" % (JOINTS[i], self.drv.decode_fault(s.fault))
-                                                                          for i, s in enumerate(st) if s.fault), None)
+                                                                          for i, s in enumerate(st[:5]) if s.fault), None)
         return ArmState([s.position for s in st], [s.load or 0.0 for s in st], None, self.powered, fault,
                         any(abs(s.velocity) > 0.02 for s in st))
 
@@ -108,7 +110,7 @@ class R1Arm:
 
     def close(self):
         try:
-            if self.powered: self.drv.disable()             # a dry run never wrote to a servo and does not start now
+            if self.powered and not self.hold: self.drv.disable()    # a dry run never wrote to a servo; a HELD arm keeps its torque
         finally: self.port.close()
 
 
@@ -122,6 +124,8 @@ def r1_picker(Picker):
             self.c.command([None] * 5 + [self.cfg.gripper_closed_rad])
             s = self._gripper_stopped()
             ld = abs(s.load[5])
+            # hold just past where it stopped, not at fully closed: squeezing a ball at full load tripped the gripper's overload (2026-10-29)
+            self.c.command([None] * 5 + [max(self.cfg.gripper_closed_rad, s.q[5] - math.radians(3.0))])
             self.report.log(label, gripper=s.q[5], gripper_load=s.load[5], judged_by="load in place of current")
             return s.q[5], ld
 

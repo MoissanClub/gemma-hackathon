@@ -44,6 +44,22 @@ def log(msg, **kw):
     print(msg, flush=True); logf.write(json.dumps(dict(kw, msg=msg, t=time.time()), default=float) + "\n"); logf.flush()
 deg = lambda q: [round(math.degrees(v), 1) for v in q]
 
+
+def settle_at_rest(arm, pk, log, tol_deg=8.0):
+    """Back to rest, then torque off. If the arm cannot get there (a fault, a failed path), it is HELD where it is with its torque on
+    (CLAUDE.md: a stop holds the robot where it is) and the operator decides: on 2026-10-29 a failed rest followed by a torque release
+    dropped the arm from the lift pose."""
+    at_rest = lambda: all(abs(math.degrees(a - b)) <= tol_deg for a, b in zip(arm.state().q[:5], arm.rest_q[:5]))
+    try:
+        if not at_rest(): pk._rest()
+    except Exception as e: log("rest failed: %s" % e)
+    s = arm.state(); log("end pose (deg) %s; clamps %s; gripper fault %s" % (deg(s.q), arm.clamps, arm.gripper_fault))
+    if at_rest(): log("at rest; disable: " + arm.enable(False))
+    else:
+        arm.hold = True
+        log("HOLDING: the arm is NOT at rest, its torque stays ON where it is. Support it, then switch the servo power off "
+            "(or run grasp.py again to retry the rest).")
+
 cal_path, prof_path, ext_path = A.robot_files(root)
 cal_path = os.path.expanduser(a.calibration) if a.calibration and os.path.exists(os.path.expanduser(a.calibration)) else cal_path
 ext = load_extrinsics(ext_path)
@@ -82,10 +98,8 @@ try:
             p = perc.object_base() or perc.object_base()
         except BaseException as e:
             log("abort at the look pose: %s: %s" % (type(e).__name__, e)); p = None
-            if not isinstance(e, Exception): pk._rest(); log("disable: " + arm.enable(False)); raise
-        if p is None:
-            pk._rest(); log("disable: " + arm.enable(False))
-            raise SystemExit("Gemma + depth found no '%s' from the look pose" % a.what)
+            if not isinstance(e, Exception): raise                # the outer finally rests, then releases (settle_at_rest)
+        if p is None: raise SystemExit("Gemma + depth found no '%s' from the look pose" % a.what)
     else:
         p = perc.object_base()
         if p is None: raise SystemExit("Gemma + depth found no '%s' from this pose" % a.what)
@@ -104,7 +118,6 @@ try:
     p = [aim[0], aim[1], p[2]]
     try: q_h = pk._hover_q(p[0], p[1])
     except RuntimeError as e:
-        if arm.powered: pk._rest(); log("disable: " + arm.enable(False))
         raise SystemExit("%s: move the object about %.0f cm closer to the robot" % (e, max(1, 100 * (math.hypot(*aim) - 0.355))))
     log("TCP aim x %.3f y %.3f so the grasp centre is over the object (%.3f, %.3f)" % (p[0], p[1], perc.target[0], perc.target[1]))
     log("hover/servo pose (deg) %s, TCP %s" % (deg(q_h), np.round(fk(q_h)[:3, 3], 3).tolist()), q_hover=q_h)
@@ -156,16 +169,8 @@ try:
             log("OUTCOME %s after %d attempt(s)" % (rep.outcome, rep.attempts))
     except BaseException as e:
         log("abort: %s: %s" % (type(e).__name__, e))
-        try: pk._rest()
-        except Exception as e2: log("rest failed: %s" % e2)
         raise
-    finally:
-        s = arm.state()
-        log("end pose (deg) %s; clamps %s" % (deg(s.q), arm.clamps))
-        log("disable: " + arm.enable(False))
 finally:
-    if arm.powered:                                            # an error between two motions: rest first, a released arm up high would drop
-        try: pk._rest(); log("rested after an error; disable: " + arm.enable(False))
-        except Exception as e: log("rest failed: %s" % e)
+    if arm.powered: settle_at_rest(arm, pk, log)               # torque off only at rest: a released arm up high drops (2026-10-29)
     arm.close(); cam.shutdown(); logf.close()
     print("log", out)
