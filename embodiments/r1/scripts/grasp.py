@@ -5,7 +5,9 @@ rest) runs on the bus directly (embodiments/r1/arm.py). His r1-mux must be stopp
 
   grasp.py dry   "the white tissue"    # arm limp, read-only: the target, the hover and descent IK, his path checks. Nothing moves.
   grasp.py hover "the white tissue"    # MOVES: to the servo pose over the object, looks twice, back to rest, torque off
+  grasp.py diag  "the white tissue"    # MOVES: hover, servo, descend, look twice at the bottom, NO close, back to rest, torque off
   grasp.py pick  "the white tissue"    # MOVES: the whole pick, then rest, torque off
+Every look's frame is saved with its boxes and the kinematic TCP drawn in (look*.jpg, depth beside it).
 
 The arm moves only with the owner present and the power switch in reach. Ctrl-C at any point: back to rest, then torque off.
 Every event goes to runs/<timestamp>-r1-grasp/."""
@@ -14,7 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(os.pat
 sys.path.insert(0, ROOT)
 
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-ap.add_argument("mode", choices=("dry", "hover", "pick"))
+ap.add_argument("mode", choices=("dry", "hover", "diag", "pick"))
 ap.add_argument("what")
 ap.add_argument("--seraphos", default="~/stefan-calib/home/stefan/workspace/seraphos", help="Stefan's seraphos tree (read-only copy)")
 ap.add_argument("--calibration", default="~/stefan-calib/home/stefan/.seraphos/calibration/so101_r1_main.yaml")
@@ -56,7 +58,7 @@ try:
     if s.fault: raise SystemExit("arm: " + s.fault)
     log("arm now (deg) %s, rest (deg) %s, torque %s" % (deg(s.q), deg(arm.rest_q), "on" if s.powered else "off"), q=s.q)
     # the target from where the arm is now (it must be still: limp at rest, or held)
-    perc = A.GemmaPerception(cam, gem, arm, ext, a.what, [0.3, 0.0], tip_contact_z, gate_m=10.0, log=log)
+    perc = A.GemmaPerception(cam, gem, arm, ext, a.what, [0.3, 0.0], tip_contact_z, gate_m=10.0, log=log, save_dir=out)
     p = perc.object_base()
     if p is None: raise SystemExit("Gemma + depth found no '%s' from this pose" % a.what)
     perc.gate = 0.08
@@ -75,6 +77,8 @@ try:
         log("DRY: nothing was sent to the arm"); raise SystemExit(0)
 
     plan = {"hover": "torque on where it is, staged move to the servo pose over the %s, gripper open, look twice, back to rest, torque off",
+            "diag": "torque on where it is, staged move over the %s, gripper open, up to 3 servo corrections, descend in steps to the floor "
+                    "protection or contact, look twice there (no close), up, back to rest, torque off",
             "pick": "torque on where it is, staged move over the %s, empty close and open, up to 3 servo corrections, descend in steps to the "
                     "floor protection or contact, close, judge, lift 10 cm, judge again, back to rest, torque off"}[a.mode] % a.what
     log("MOTION PLAN (%s, speed cap %.1f rad/s): %s" % (a.mode, a.speed, plan))
@@ -88,6 +92,22 @@ try:
                 d = perc.object_minus_tip()
                 log("at hover %d: object minus tip %s cm" % (i, None if d is None else [round(d.dx * 100, 1), round(d.dy * 100, 1)]))
             pk._rest()
+        elif a.mode == "diag":                                    # live_pick.py's diag, with our perception
+            x, y = p[0], p[1]
+            pk._staged(arm.state().q[:5], q_h, gripper=cfg.gripper_open_rad); pk._gripper_stopped()
+            for i in range(cfg.servo_iterations):
+                d = perc.object_minus_tip()
+                log("servo %d: object minus tip %s cm" % (i, None if d is None else [round(d.dx * 100, 1), round(d.dy * 100, 1)]))
+                if d is None or math.hypot(d.dx, d.dy) < cfg.servo_tol_m: break
+                x, y = x + d.dx, y + d.dy; q_h = pk._hover_q(x, y); pk._go(q_h, cfg.gripper_open_rad); arm.wait(0.5)
+            log("descent ended: %s" % pk._descend(x, y, q_h))
+            tcp = fk(arm.state().q[:5])[:3, 3]
+            log("at the bottom: TCP %s (aimed x %.3f y %.3f)" % (np.round(tcp, 3).tolist(), x, y), tcp=tcp, aim=[x, y])
+            for i in range(2):
+                q_b, f_b, found = perc.look()
+                log("bottom look %d: %s" % (i, ["(%.3f, %.3f, %.3f) minus TCP (%.1f, %.1f) cm" % (pp[0], pp[1], pp[2], (pp[0] - tcp[0]) * 100,
+                                                (pp[1] - tcp[1]) * 100) for _, pp, _ in found]))
+            pk._go(pk._hover_q(x, y), cfg.gripper_open_rad); pk._rest()
         else:
             rep = pk.run(p[0], p[1])
             for e in rep.events: log("  pick: %s" % json.dumps(e, default=float)[:240], event=e)

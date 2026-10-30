@@ -115,10 +115,30 @@ class R1Arm:
 class GemmaPerception:
     """seraphos.arm.pick_seq.Perception from Gemma boxes + Orbbec depth. `target` is the current estimate of the object in the arm base
     frame; a box is accepted only within `gate_m` of it (a box on the jaws or on another object is ignored)."""
-    def __init__(self, cam, gem, arm, ext, what, target, tip_contact_z, gate_m=0.08, log=print):
+    def __init__(self, cam, gem, arm, ext, what, target, tip_contact_z, gate_m=0.08, log=print, save_dir=None):
         self.cam, self.gem, self.arm, self.ext, self.what, self.log = cam, gem, arm, ext, what, log
-        self.target, self.tip_contact_z, self.gate = list(target), tip_contact_z, gate_m
-        self.seen = []                                           # (time, q, box, xyz_base) of every accepted look
+        self.target, self.tip_contact_z, self.gate, self.save_dir = list(target), tip_contact_z, gate_m, save_dir
+        self.seen, self.n = [], 0                                # (time, q, box, xyz_base) of every accepted look
+
+    def save(self, f, found, label=""):
+        """The look's frame with every box, its base-frame point, and the TCP projected into the image (where the kinematics put
+        the grasp centre): the offset between the two is what a miss is made of."""
+        if not self.save_dir: return
+        import cv2, numpy as np
+        from seraphos.arm.handeye import base_to_camera
+        from seraphos.arm.so101_kinematics import fk
+        img, q = f.image.copy(), self.arm.state().q[:5]; tcp = fk(q)
+        for b, p, _ in found:
+            cv2.rectangle(img, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
+            cv2.putText(img, "%.3f %.3f %.3f" % tuple(p), (int(b[0]), max(14, int(b[1]) - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
+        c = base_to_camera(tcp, tcp[:3, 3], self.ext); fx, fy, cx, cy = f.meta["K"]
+        if c[2] > 0.01:
+            u, v = int(round(fx * c[0] / c[2] + cx)), int(round(fy * c[1] / c[2] + cy))
+            cv2.drawMarker(img, (u, v), (0, 0, 255), cv2.MARKER_CROSS, 24, 2)
+            cv2.putText(img, "TCP (kinematic)", (u + 8, v - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1)
+        cv2.imwrite(os.path.join(self.save_dir, "look%02d%s.jpg" % (self.n, label)), img)
+        np.save(os.path.join(self.save_dir, "look%02d%s_depth.npy" % (self.n, label)), f.depth.astype(np.float16))
+        self.n += 1
 
     def look(self):
         """Fresh frame at the arm's present pose -> [(box, xyz_base)] for every Gemma box that depth can locate."""
@@ -134,6 +154,7 @@ class GemmaPerception:
             except Refused as e: self.log("  box %s refused: %s" % ([round(v) for v in b], e)); continue
             p = camera_to_base(tcp, np.array(self.cam.to_depth_frame(tg.xyz)), self.ext)
             out.append((b, [float(v) for v in p], tg))
+        self.save(f, out)
         return q, f, out
 
     def object_base(self):
