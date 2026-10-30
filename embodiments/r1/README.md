@@ -65,5 +65,18 @@ ssh -t rosie@r1 'cd ~/r1-gemma/harness && ../.venv/bin/python -B run.py -e r1 --
   (wheels); servo EEPROM uncalibrated (homing offset 0, limits 0-4095): Stefan's calibration (`~/.seraphos/calibration/
   so101_r1_main.yaml`, his hand sweep 2026-10-19) holds the zero, the joint limits and the rest pose, and his
   `seraphos/arm/so101_kinematics.py` the FK/IK. The bus is free only while his `r1-mux` is stopped.
+- **Grasp** (`scripts/grasp.py`, `arm.py`: Stefan's `pick_seq.Picker` from his read-only tree, our direct-bus client and Gemma +
+  depth perception), 2026-10-29, Stefan's services stopped, arm speed cap 0.8 rad/s. Six motion runs:
+  1. tissue, aimed with the kinematic TCP: 2 misses (closed on air). The TCP of his kinematics is the FIXED jaw tip (depth: 6 mm);
+     the middle of the open jaws is 4.2 cm to its left (`grasp-offset.json`).
+  2. tissue, grasp centre aimed, found from a look pose (`--look 0.27,0.03`; rest sees only past ~30 cm, the arm reaches ~36 cm):
+     **grasped and lifted** (image after the lift: in the jaws), judged a miss (+1.8 deg, his margin 6 deg; no current on this bus)
+     and released by the retry. Now judged by the gripper load (0.272 held vs 0.104-0.112 empty; threshold 0.08).
+  3. tissue: aborted at hover (a person's hand over the target; the tissue was out of view, so it never descended).
+  4. golden ball: **grasped and lifted** (gripper +40 deg, held after the lift), then the gripper overloaded squeezing toward fully
+     closed, the fault blocked the rest, and the torque release DROPPED the arm from the lift pose (it fell onto its stops, servos
+     fine after). Fixed: the grip holds 3 deg past contact, a gripper fault does not stop the arm, torque goes off only at rest
+     (otherwise the arm is held where it is).
+  n = 4 grasp attempts with the grasp centre: 2 held, 1 aborted, 1 miss (tissue, attempt 2 of run 2). Not a success rate.
 - Next: base-frame targets (his hand-eye calibration); joint state at capture and a hand-eye calibration (base-frame targets); then the arm,
   through Stefan's interface and with him present.
