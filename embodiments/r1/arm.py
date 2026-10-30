@@ -112,6 +112,30 @@ class R1Arm:
         finally: self.port.close()
 
 
+def r1_picker(Picker):
+    """Stefan's Picker judging the grasp by the gripper's LOAD where it would use the current (judge_grasp: position margin OR
+    current rise). This bus reads no current, and a soft object squeezes flat: on 2026-10-29 a held tissue stopped the gripper only
+    1.8 deg above an empty close (his margin is 6 deg) while its load read 0.272 against 0.104-0.112 empty, and the image after the
+    lift showed it in the jaws: judged a miss, released by the retry. The load threshold is cfg.hold_current_a (grasp-offset.json)."""
+    class R1Picker(Picker):
+        def _close_and_measure(self, label):
+            self.c.command([None] * 5 + [self.cfg.gripper_closed_rad])
+            s = self._gripper_stopped()
+            ld = abs(s.load[5])
+            self.report.log(label, gripper=s.q[5], gripper_load=s.load[5], judged_by="load in place of current")
+            return s.q[5], ld
+
+        def _attempt(self, x, y):
+            ok = Picker._attempt(self, x, y)
+            if not ok:                                           # the lift re-check reads the load straight from the state: redo it
+                s = self.c.state(); e = self._empty
+                ok = (s.q[5] - e[0] > self.cfg.hold_margin_rad or abs(s.load[5]) - (e[1] or 0.0) > self.cfg.hold_current_a) and \
+                     any(ev.get("what") == "grasp judged at the floor" and ev.get("holding") for ev in self.report.events[-3:])
+                self.report.log("grasp re-checked by load after the lift", holding=ok, gripper_load=s.load[5], empty_load=e[1])
+            return ok
+    return R1Picker
+
+
 class GemmaPerception:
     """seraphos.arm.pick_seq.Perception from Gemma boxes + Orbbec depth. `target` is the current estimate of the object in the arm base
     frame; a box is accepted only within `gate_m` of it (a box on the jaws or on another object is ignored)."""

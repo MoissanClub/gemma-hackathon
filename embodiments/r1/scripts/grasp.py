@@ -64,8 +64,9 @@ try:
     log("grasp centre in the TCP frame %s m (grasp-offset.json: %s)" % (go["grasp_centre_tcp_m"], go["provenance"][:60]))
     perc = A.GemmaPerception(cam, gem, arm, ext, a.what, [0.3, 0.0], tip_contact_z, gate_m=10.0, log=log, save_dir=out,
                              grasp_offset=go["grasp_centre_tcp_m"])
-    cfg = PickConfig(arm.limits[:4], ext, arm.rest_q[:5], approach_stop_m=0.020)
-    pk = Picker(arm, perc, cfg)
+    cfg = PickConfig(arm.limits[:4], ext, arm.rest_q[:5], approach_stop_m=0.020, hold_current_a=go["hold_load_rise"])
+    pk = A.r1_picker(Picker)(arm, perc, cfg)
+    log("grasp judged by gripper position (+%.0f deg) or load rise (+%.2f over an empty close)" % (math.degrees(cfg.hold_margin_rad), cfg.hold_current_a))
     if a.look:                                                 # look from above the reachable floor, not from rest (rest sees only past ~30 cm)
         lx, ly = map(float, a.look.split(","))
         q_look = pk._hover_q(lx, ly)
