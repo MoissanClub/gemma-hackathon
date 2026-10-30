@@ -119,6 +119,24 @@ class R1Arm:
         finally: self.port.close()
 
 
+def wider_descent_margin(tip_contact_z, log, high_m=0.05, z_tol_high=0.012):
+    """His descent's position contact check (seraphos.arm.pick.contact_verdict, z_tol 6 mm against the tip's lag at hover) with a
+    wider margin while the jaw tip is more than `high_m` above the floor, where only air is: on 2026-10-29, after two drops, both
+    descents of a run stopped on their first 2 cm step at 13-14 cm up ('tip 6.4 / 8.9 mm above its target'). His 6 mm stays below
+    high_m, where the object and the floor are. Patched into pick_seq's namespace in this process only; his files are unchanged.
+    Every call is logged (tip height, the error, the hover bias, the verdict)."""
+    import seraphos.arm.pick_seq as S
+    from seraphos.arm.pick import contact_verdict
+    def verdict(actual_tcp_z, target_z, q_actual, q_target, load_now, load_prev, z_bias_m=0.0, **kw):
+        h = actual_tcp_z - tip_contact_z
+        tol = z_tol_high if h > high_m else kw.pop("z_tol_m", 0.006)
+        v = contact_verdict(actual_tcp_z, target_z, q_actual, q_target, load_now, load_prev, z_tol_m=tol, z_bias_m=z_bias_m, **kw)
+        log("  descent step: tip %.1f mm up, %.1f mm above target, hover bias %.1f mm, tol %.0f mm -> %s" % (
+            1000 * h, 1000 * (actual_tcp_z - target_z), 1000 * z_bias_m, 1000 * tol, v.reason or "free"))
+        return v
+    S.contact_verdict = verdict
+
+
 def r1_picker(Picker):
     """Stefan's Picker judging the grasp by the gripper's LOAD where it would use the current (judge_grasp: position margin OR
     current rise). This bus reads no current, and a soft object squeezes flat: on 2026-10-29 a held tissue stopped the gripper only

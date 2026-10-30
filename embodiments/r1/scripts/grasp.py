@@ -86,6 +86,7 @@ try:
                              grasp_offset=go["grasp_centre_tcp_m"])
     cfg = PickConfig(arm.limits[:4], ext, arm.rest_q[:5], approach_stop_m=0.020, hold_current_a=go["hold_load_rise"])
     pk = A.r1_picker(Picker)(arm, perc, cfg)
+    A.wider_descent_margin(tip_contact_z, log)
     log("grasp judged by gripper position (+%.0f deg) or load rise (+%.2f over an empty close)" % (math.degrees(cfg.hold_margin_rad), cfg.hold_current_a))
     if a.look:                                                 # look from above the reachable floor, not from rest (rest sees only past ~30 cm)
         lx, ly = map(float, a.look.split(","))
